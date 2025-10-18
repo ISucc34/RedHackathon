@@ -16,20 +16,21 @@
 
     <div class="container"> 
         <div class="sidebar">
-            <h3>Side Column</h3>
+            <h2>Search Map</h2>
             <form action="/action_page.php">
-                <label for="gsearch">Search Map:</label>
                 <input type="search" id="gsearch" name="gsearch">
             </form>
+            <h2>Key</h2>
             <ul>
-                <h4>Key</h4>
                 <li>Filter</li>
             </ul>
         </div>
-        <div id="map"></div>
+        <div id="map">
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <script src="script.js"></script>
+        </div>
     </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="script.js"></script>
+
 </body>
 
 </html>
