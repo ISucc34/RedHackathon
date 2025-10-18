@@ -10,17 +10,17 @@
   width: 300px;
   padding: 20px;
   background-color: #f0f0f0; 
-  border-right: 1px solid #ccc;
+  border-right: 1px solid #000000;
   overflow-y: auto;
 }
 
 .map {
   flex-grow: 1; 
   height: 100%; 
-  position: relative; 
+  position: absolute; 
 }
 
 #map {
   width: 80%;
-  height: 80%;
+  height: 90%;
 }
