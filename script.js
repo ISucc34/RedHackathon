@@ -27,7 +27,7 @@ function getEarthquakes() {
 function displayEarthquakes(data) {
     let earthquakes = data.features;  // Get array of earthquakes
     
-    console.log(`Found ${earthquakes.length} earthquakes`);
+    console.log(`Found ${earthquakes.length} earthquakes`); //prints how many earthquakes were found
     
     earthquakes.forEach(function(quake) {
         // Get earthquake details
