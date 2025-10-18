@@ -39,11 +39,11 @@ function displayEarthquakes(data) {
         let time = new Date(quake.properties.time);  // Time of earthquake
         
         // Create marker for each earthquake
-        L.marker([lat, lon]).addTo(map)
-            .bindPopup(`
-                <b>Magnitude:</b> ${mag}<br>
-                <b>Location:</b> ${place}<br>
-                <b>Time:</b> ${time.toLocaleString()}
+        L.marker([lat, lon]).addTo(map) //creates a marker on the map at the specified coordinates; this is where the earthquake happened
+            .bindPopup(` //attaches a popup box to the marker- this popup shows info about the earthquake when you click on the marker
+                <b>Magnitude:</b> ${mag}<br> //magnitude of the earthquake (measures the energy released by an earthquake)
+                <b>Location:</b> ${place}<br> //location of the earthquake
+                <b>Time:</b> ${time.toLocaleString()} //time of earthquake
             `);
     });
 }
