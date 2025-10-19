@@ -11,26 +11,32 @@ let earthquakeMarkers = [];
 let heatwaveMarkers = [];
 
 // Custom icons
-const brownIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+const greenIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
-
 const redIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-red.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
-
-const orangeIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
+const purpleIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+const blueIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -62,7 +68,7 @@ function displayEarthquakes(data) {
         let place = quake.properties.place;
         let time = new Date(quake.properties.time);
 
-        let marker = L.marker([lat, lon], { icon: brownIcon }).addTo(map)
+          let marker = L.marker([lat, lon], { icon: greenIcon }).addTo(map)
           .bindPopup(`
             <b>Magnitude:</b> ${mag}<br>
             <b>Location:</b> ${place}<br>
@@ -125,12 +131,19 @@ function getHeatWaveData(lat, lon) {
     .then(response => response.json())
     .then(data => {
       const temp = data.current_weather?.temperature;
-      if (temp === undefined) return;
-      // Threshold for marking as a heatwave — adjust as needed
-      if (temp >= 30) {
+      if (temp === undefined) {
+        console.log('No temperature data returned for heatwave marker at', lat, lon);
+        return;
+      }
+      console.log(`Fetched temperature for heatwave marker: ${temp}°C at [${lat}, ${lon}]`);
+      // Lower threshold for marking as a heatwave
+      if (temp >= 10) {
+        console.log('Adding heatwave marker:', lat, lon, temp);
         const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`<b>Temperature:</b> ${temp}°C`);
         heatwaveMarkers.push(marker);
+      } else {
+        console.log('Temperature below threshold for heatwave marker:', temp);
       }
     })
     .catch(error => console.error('Error fetching heatwave data:', error));
@@ -208,9 +221,39 @@ function getWildfiresForTexas() {
       const lon = coords[0];
       const lat = coords[1];
       const title = event.title || 'Wildfire';
-      const marker = L.marker([lat, lon], { icon: orangeIcon }).addTo(map)
-      .bindPopup(`<b>${title}</b><br>${event.description || ''}`);
-      wildfireMarkers.push(marker);
+        const marker = L.marker([lat, lon], { icon: purpleIcon }).addTo(map).bindPopup(`<b>${title}</b><br>${event.description || ''}`);
+        wildfireMarkers.push(marker);
+let floodMarkers = [];
+document.getElementById('toggle-floods').addEventListener('change', function() {
+  if (this.checked) {
+    getFloodsForTexas();
+  } else {
+    clearMarkers(floodMarkers);
+  }
+});
+
+function getFloodsForTexas() {
+  clearMarkers(floodMarkers);
+  // Use USGS water data for Texas bounding box
+  const bbox = '-106.645646,25.837377,-93.508039,36.500704';
+  fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${bbox}&parameterCd=00065,00060&siteStatus=active`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.value || !data.value.timeSeries) return;
+      data.value.timeSeries.forEach(site => {
+        const siteInfo = site.sourceInfo;
+        const values = site.values[0]?.value;
+        const latestValue = values ? values[values.length - 1] : null;
+        if (!siteInfo || !siteInfo.geoLocation || !siteInfo.geoLocation.geogLocation || !latestValue) return;
+        const lat = siteInfo.geoLocation.geogLocation.latitude;
+        const lon = siteInfo.geoLocation.geogLocation.longitude;
+        const marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
+          .bindPopup(`<b>Flood Site:</b> ${siteInfo.siteName}<br><b>Value:</b> ${latestValue.value} ${site.variable.unit.unitCode}`);
+        floodMarkers.push(marker);
+      });
+    })
+    .catch(err => console.error('Error fetching floods:', err));
+}
     });
     })
     .catch(err => console.error('Error fetching wildfires:', err));
