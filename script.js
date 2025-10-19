@@ -44,7 +44,7 @@ function displayEarthquakes(data) {
     const place = quake.properties.place;
     const time = new Date(quake.properties.time);
 
-    let marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
+    let marker = L.marker([lat, lon], { icon: brownIcon }).addTo(map)
       .bindPopup(`
         <b>Magnitude:</b> ${mag}<br>
         <b>Location:</b> ${place}<br>
