@@ -561,9 +561,13 @@ function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
 }
 
 
-function clearMarkers(markerArray) {
+/*function clearMarkers(markerArray) {
     markerArray.forEach(marker => map.removeLayer(marker));
     markerArray.length = 0;
+}*/
+
+function clearMarkers(markerArray) {
+  markerArray.forEach(m => map.removeLayer(m));
 }
 
 // Toggle logic and startup
@@ -705,7 +709,7 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
 document.getElementById('toggle-heatwaves').addEventListener('change', function() {
   if (this.checked) {
     getHeatWavesForTexas(); // or re-fetch if you want
-    //addCenterHeatMarker();
+    addCenterHeatMarker();
     if (heatLayer && heatPoints.length > 0) {
       heatLayer.addTo(map);
     }
