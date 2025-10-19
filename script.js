@@ -1,17 +1,14 @@
-// Initialize the map centered on Texas
-let map = L.map('map').setView([31.0, -100.0], 6);
+let map = L.map('map').setView([31.0, -100.0], 6); // Texas map
 
-// Add OpenStreetMap base tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// Earthquake markers array
 let earthquakeMarkers = [];
+let wildfireMarkers = [];
 
-// Blue icon for earthquakes
-const blueIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+const brownIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-brown.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -19,13 +16,15 @@ const blueIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-// Wildfire layer (NASA FIRMS WMS)
-let wildfireLayer = L.tileLayer.wms('https://firms.modaps.eosdis.nasa.gov/wms/active_fire', {
-  layers: 'fires_modis_24',
-  format: 'image/png',
-  transparent: true,
-  attribution: 'NASA FIRMS MODIS Active Fires'
+const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
 });
+
 
 // Fetch and display earthquakes
 function getEarthquakes() {
@@ -55,7 +54,45 @@ function displayEarthquakes(data) {
   });
 }
 
-// Clear markers utility
+// Fetch and display wildfires from NASA FIRMS MODIS 24h GeoJSON
+function getWildfires() {
+  const url = 'https://firms.modaps.eosdis.nasa.gov/active_fire/c6/json/MODIS_C6_USA_contiguous_and_Hawaii_24h.json';
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      displayWildfires(data);
+    })
+    .catch(error => console.error('Error fetching wildfires:', error));
+}
+
+function displayWildfires(data) {
+  clearMarkers(wildfireMarkers);
+  data.features.forEach(fire => {
+    const [lat, lon] = fire.geometry.coordinates; // Note NASA FIRMS uses [lat, lon] or [lon, lat]? Confirmed below.
+    // FIRMS uses [longitude, latitude], same as GeoJSON spec
+    // So we need [lat, lon] for Leaflet marker
+    const coords = fire.geometry.coordinates;
+    const latitude = coords[1];
+    const longitude = coords[0];
+
+    const brightness = fire.properties.brightness;
+    const confidence = fire.properties.confidence;
+    const date = fire.properties.acq_date;
+    const time = fire.properties.acq_time;
+
+    let marker = L.marker([latitude, longitude], { icon: redIcon }).addTo(map)
+      .bindPopup(`
+        <b>Wildfire Detected</b><br>
+        <b>Brightness:</b> ${brightness}<br>
+        <b>Confidence:</b> ${confidence}<br>
+        <b>Date:</b> ${date}<br>
+        <b>Time:</b> ${time}
+      `);
+    wildfireMarkers.push(marker);
+  });
+}
+
 function clearMarkers(markerArray) {
   markerArray.forEach(marker => map.removeLayer(marker));
   markerArray.length = 0;
@@ -87,7 +124,7 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
     });
 });
 
-// Checkbox event handlers
+// Checkbox filters
 document.getElementById('toggle-earthquakes').addEventListener('change', function () {
   if (this.checked) {
     getEarthquakes();
@@ -98,16 +135,12 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
 
 document.getElementById('toggle-wildfires').addEventListener('change', function () {
   if (this.checked) {
-    wildfireLayer.addTo(map);
+    getWildfires();
   } else {
-    map.removeLayer(wildfireLayer);
+    clearMarkers(wildfireMarkers);
   }
 });
 
-// Load earthquakes and wildfire layer by default if checkboxes are checked
-if (document.getElementById('toggle-earthquakes').checked) {
-  getEarthquakes();
-}
-if (document.getElementById('toggle-wildfires').checked) {
-  wildfireLayer.addTo(map);
-}
+// Load disasters by default
+getEarthquakes();
+getWildfires();
