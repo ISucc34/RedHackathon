@@ -120,14 +120,18 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
 });
 
 function getHeatWaveData(lat, lon) {
-  fetch(`https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
+  // Use Open-Meteo's free API for current temperature (no API key needed)
+  clearMarkers(heatwaveMarkers);
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius&timezone=UTC`)
     .then(response => response.json())
     .then(data => {
-      const temp = data.data[0].temp;
-      if (temp >= 20) {
-        L.marker([lat, lon], { icon: redIcon })
-          .addTo(map)
+      const temp = data.current_weather?.temperature;
+      if (temp === undefined) return;
+      // Threshold for marking as a heatwave — adjust as needed
+      if (temp >= 30) {
+        const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`<b>Temperature:</b> ${temp}°C`);
+        heatwaveMarkers.push(marker);
       }
     })
     .catch(error => console.error('Error fetching heatwave data:', error));
@@ -135,23 +139,17 @@ function getHeatWaveData(lat, lon) {
 
 
 function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
+    // Keep this helper for datasets that supply a full weather payload.
     clearMarkers(heatwaveMarkers);
     const weather = data.current_weather;
     if (!weather) {
         console.log("No current weather data found.");
         return;
     }
-
     const temp = weather.temperature;
-    const time = new Date(weather.time);
-
-    if (temp >= 20) {
-        let marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
-          .bindPopup(`
-            <b>Brightness:</b> ${brightness}<br>
-            <b>Date:</b> ${acq_date} ${acq_time}<br>
-            <b>Location ID:</b> ${place}
-          `);
+    if (temp >= 30) {
+        const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
+          .bindPopup(`Heatwave at ${placeName}: ${temp}°C`);
         heatwaveMarkers.push(marker);
     } else {
       console.log(`Temperature at ${placeName} is only ${temp}°C – not a heatwave.`);
