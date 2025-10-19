@@ -225,6 +225,7 @@ let clusterPredictionLayers = []; // overlays for predicted counts
 
 // Create clusters from current earthquakeMarkers and draw them
 function createClusters(k = 4, seed = null) {
+  showSpinner('cluster-spinner');
   // Clear existing cluster layers
   clusterLayers.forEach(layer => map.removeLayer(layer));
   clusterLayers = [];
@@ -291,6 +292,8 @@ function createClusters(k = 4, seed = null) {
       });
     }
   }
+  // done
+  hideSpinner('cluster-spinner');
 }
 
 // Map a predicted total earthquake count to clusters and draw overlays
@@ -330,6 +333,16 @@ function mapPredictionToClusters(totalPredicted) {
   }
 
   console.log('Mapped prediction to clusters:', counts, 'total predicted', totalPredicted);
+}
+
+// Spinner helpers
+function showSpinner(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('hidden');
+}
+function hideSpinner(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
 }
 
 // Simple convex hull (Monotone chain) for lat/lon points
@@ -614,6 +627,7 @@ function handleEarthquakePrediction() {
     
     // Make prediction
     try {
+    showSpinner('prediction-spinner');
         const prediction = earthquakePredictionModel.predictSingleYear(year);
         
         // Display results
@@ -633,9 +647,11 @@ function handleEarthquakePrediction() {
         
         console.log(`Predicted ${prediction} earthquakes for ${year}`);
   lastPredictionValue = prediction;
+  hideSpinner('prediction-spinner');
     } catch (error) {
         console.error('Error making prediction:', error);
         alert('Error generating prediction. Please try again.');
+    hideSpinner('prediction-spinner');
     }
 }
 
