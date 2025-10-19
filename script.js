@@ -586,6 +586,8 @@ if (document.getElementById('toggle-heatwaves').checked) {
 
 // Function: sample a grid across Texas using Open-Meteo batch queries and add red markers for high temps
 function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
+  heatwaveMarkers = [];
+  heatPoints = [];
   clearMarkers(heatwaveMarkers);
   clearHeatLayer();
   const minLon = -106.645646, minLat = 25.837377, maxLon = -93.508039, maxLat = 36.500704;
@@ -645,6 +647,12 @@ function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
         }
       })
       .catch(err => console.error('Error fetching heat batch:', err));
+  });
+  Promise.all(fetches).then(() => {
+    heatLayer = L.heatLayer(heatPoints, { radius: 25 });
+    if (document.getElementById('toggle-heatwaves').checked && heatPoints.length > 0) {
+      heatLayer.addTo(map);
+    }
   });
 
   Promise.all(fetches).then(() => console.log(`Heat sampling complete. Markers added: ${heatwaveMarkers.length}`));
