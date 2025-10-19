@@ -7,6 +7,10 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 let earthquakeData; //hold earthquake info
 let heatWaveData;
+// Add these two arrays to keep track of your markers:
+let earthquakeMarkers = [];
+let heatwaveMarkers = [];
+
 function getEarthquakes() {
     fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')//all earthquakes in the past 24 hours
         .then(response => response.json()) //convert response from text format to useable javascript object
@@ -19,30 +23,27 @@ function getEarthquakes() {
         });
 }
 
-// Function to display earthquakes as markers
 function displayEarthquakes(data) {
-    let earthquakes = data.features;  // Get array of earthquakes
-    
-    console.log(`Found ${earthquakes.length} earthquakes`); //prints how many earthquakes were found
-    
-    earthquakes.forEach(function(quake) {
-        // Get earthquake details
+    clearMarkers(earthquakeMarkers);
+    let earthquakes = data.features;
+    earthquakes.forEach(quake => {
         let coords = quake.geometry.coordinates;
-        let lat = coords[1];  // Latitude
-        let lon = coords[0];  // Longitude
-        let mag = quake.properties.mag;  // Magnitude
-        let place = quake.properties.place;  // Location name
-        let time = new Date(quake.properties.time);  // Time of earthquake
+        let lat = coords[1];
+        let lon = coords[0];
+        let mag = quake.properties.mag;
+        let place = quake.properties.place;
+        let time = new Date(quake.properties.time);
         
-        // Create marker for each earthquake
-        L.marker([lat, lon]).addTo(map) //creates a marker on the map at the specified coordinates; this is where the earthquake happened
-            .bindPopup(` //attaches a popup box to the marker- this popup shows info about the earthquake when you click on the marker
-                <b>Magnitude:</b> ${mag}<br> //magnitude of the earthquake (measures the energy released by an earthquake)
-                <b>Location:</b> ${place}<br> //location of the earthquake
-                <b>Time:</b> ${time.toLocaleString()} //time of earthquake
+        let marker = L.marker([lat, lon]).addTo(map)
+            .bindPopup(`
+                <b>Magnitude:</b> ${mag}<br>
+                <b>Location:</b> ${place}<br>
+                <b>Time:</b> ${time.toLocaleString()}
             `);
+        earthquakeMarkers.push(marker);
     });
 }
+
 
 // Load earthquakes when page loads
 getEarthquakes();
@@ -69,7 +70,15 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
                 L.marker([lat, lon]).addTo(map)
                     .bindPopup(`Search result: ${query}`)
                     .openPopup();
-            } else {
+                 // <<---- Add this block here ---->>
+                if (document.getElementById('toggle-heatwaves').checked) {
+                    getHeatWaveData(lat, lon, query);
+                }
+                if (document.getElementById('toggle-earthquakes').checked) {
+                    getEarthquakes();
+                }
+            } 
+            else {
                 alert("Location not found. Please try again.");
             }
         })
@@ -83,31 +92,60 @@ function getHeatWaveData(lat, lon, placeName = "Searched Location") {
   fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
     .then(response => response.json())
     .then(data => {
-      heatWaveData = data; // store the data
-      displayHeatWaves(heatWaveData, lat, lon, placeName); // pass lat, lon, and location name
+      console.log("Heatwave API response:", data); // for debugging
+      displayHeatWaves(data, lat, lon, placeName); // call display function
     })
     .catch(error => {
       console.error('Error fetching heat wave data:', error);
     });
 }
+
 function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
-    // Extract current weather info
+    clearMarkers(heatwaveMarkers);
     const weather = data.current_weather;
     if (!weather) {
         console.log("No current weather data found.");
         return;
     }
 
-    // Temperature and time
     const temp = weather.temperature;
     const time = new Date(weather.time);
 
-    // Create or update a marker at this location
-    L.marker([lat, lon], { icon: heatwaveIcon }).addTo(map)
-      .bindPopup(`
-        <b>Temperature:</b> ${temp} °C<br>
-        <b>Location:</b> ${placeName}<br>
-        <b>Time:</b> ${time.toLocaleString()}
-      `).openPopup();
+    if (temp >= 35) {
+        let marker = L.marker([lat, lon]).addTo(map)
+          .bindPopup(`
+            <b>Temperature:</b> ${temp} °C<br>
+            <b>Location:</b> ${placeName}<br>
+            <b>Time:</b> ${time.toLocaleString()}
+          `);
+        heatwaveMarkers.push(marker);
+    } else {
+      console.log(`Temperature at ${placeName} is only ${temp}°C – not a heatwave.`);
+    }
 }
+
+function clearMarkers(markerArray) {
+    markerArray.forEach(marker => map.removeLayer(marker));
+    markerArray.length = 0;
+}
+
+document.getElementById('toggle-earthquakes').addEventListener('change', function() {
+    if (this.checked) {
+        getEarthquakes();  // Fetch and display earthquakes
+    } else {
+        clearMarkers(earthquakeMarkers);  // Remove earthquake markers
+    }
+});
+
+document.getElementById('toggle-heatwaves').addEventListener('change', function() {
+    if (this.checked) {
+        // You need to call getHeatWaveData with current map center or searched location coords
+        const center = map.getCenter();
+        getHeatWaveData(center.lat, center.lng);
+    } else {
+        clearMarkers(heatwaveMarkers);
+    }
+});
+
+
 
