@@ -5,59 +5,100 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nature Calls</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="style.css" rel="stylesheet"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BBH+Sans+Bartle&family=BBH+Sans+Bogle&family=Exo+2:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   <style>
   body {
-  background-color: whitesmoke;
-  font-family: "Skia Regular", sans-serif;
+  background-color: rgb(255, 255, 255);
+  font-family: 'Exo 2', sans-serif;
+  margin-top: 60px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="style.css" rel="stylesheet"/>
+    <!-- Add Inter font for improved typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
     <div class="topnav">
-        <h1 class="title">Nature Calls</h1>
-    </div>
+        <div class="nav-center">
+            <h1 style="font-family: 'BBH Sans Bartle', Gadget, sans-serif;" class="nav-title">NATURE CALLS</h1>
+        </div>
+        <div class="line"></div> 
+      </div>
 
     <div class="container"> 
-        <div class="sidebar">
-            <h2>Please Enter Your City</h2>
-            <form id="search-form">
-                <input type="search" id="gsearch" name="gsearch">
-                <button type = "submit" class = "search-btn">Enter</button>
-            </form>
-            <h2>Marker Key</h2>
-            <h3>
-                <ul>
-                    <li style = "color: #008000;">Earthquakes</li>
-                    <li style = "color: #FF0000;">Heat Waves</li>
-                    <li style = "color: #800080;">Wild Fires</li>
-                    <li style = "color: #0000FF;">Floods</li>
-                </ul>
-            </h3>
-            <h2>Filter</h2>
-                <label>
-                    <input type="checkbox" id="toggle-earthquakes" class="category-filter" value="earthquakes" checked>
-                    Earthquakes
-                </label><br>
-                <label>
-                    <input type="checkbox" id="toggle-heatwaves" class="category-filter" value="heatwaves" checked>
-                    Heat Waves
-                </label><br>
-                <label>
-                    <input type="checkbox" id="toggle-wildfires" class="category-filter" value="wildfires" checked>
-                    Wild Fires
-                </label><br>
-                <label>
-                    <input type="checkbox" id="toggle-floods" class="category-filter" value="floods" checked>
-                    Floods
-                </label>
-        </div>
+        <!-- Skip link for keyboard users -->
+        
+
+        <aside id="sidebar" class="sidebar" aria-labelledby="sidebar-heading" aria-hidden="false">
+            <div class="sidebar-header">
+                <h2 id="sidebar-heading">Controls</h2>
+                <button id="sidebar-toggle" class="sidebar-toggle" aria-expanded="true" aria-controls="sidebar-panel" aria-label="Collapse sidebar">☰</button>
+            </div>
+
+            <div id="sidebar-panel" class="sidebar-panel" role="region">
+                <h3 class="visually-hidden">Search</h3>
+                <div class="card">
+                    <label for="gsearch">Enter a city</label>
+                    <form id="search-form" class="search-form" role="search">
+                        <input type="search" id="gsearch" name="gsearch" placeholder="e.g. Austin, TX">
+                        <button type="submit" class="search-btn">Search</button>
+                    </form>
+                </div>
+
+                <!-- Earthquake Prediction Section -->
+                <section class="card prediction-section" aria-labelledby="prediction-heading">
+                    <h3 id="prediction-heading">🔮 Earthquake Predictions</h3>
+                    <div class="prediction-controls">
+                        <label for="prediction-year">Year</label>
+                        <input type="number" id="prediction-year" value="2025" min="2024" max="2030" class="year-input" aria-label="Prediction year">
+                        <button id="predict-button" class="predict-btn">Predict</button>
+                        <button id="map-predict-button" class="predict-btn secondary" aria-label="Map prediction to clusters">Map to clusters</button>
+                    </div>
+                    <div id="prediction-results" class="prediction-results" aria-live="polite">
+                        <div id="prediction-output">Select a year to see earthquake predictions</div>
+                        <div id="model-info" class="model-info"></div>
+                        <div id="prediction-spinner" class="spinner hidden" aria-hidden="true" aria-label="Loading prediction"></div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h3 class="card-title">Legend</h3>
+                    <ul class="legend-list">
+                        <li><span class="chip quake-chip" aria-hidden="true"></span> Earthquakes</li>
+                        <li><span class="chip heat-chip" aria-hidden="true"></span> Heat Waves</li>
+                        <li><span class="chip fire-chip" aria-hidden="true"></span> Wild Fires</li>
+                        <li><span class="chip flood-chip" aria-hidden="true"></span> Floods</li>
+                    </ul>
+                </section>
+
+                <section class="card">
+                    <h3 class="card-title">Filters</h3>
+                    <div class="filter-row"><label><input type="checkbox" id="toggle-earthquakes" class="category-filter" value="earthquakes" checked> Earthquakes</label></div>
+                    <div class="filter-row"><label><input type="checkbox" id="toggle-heatwaves" class="category-filter" value="heatwaves" checked> Heat Waves</label></div>
+                    <div class="filter-row"><label><input type="checkbox" id="toggle-wildfires" class="category-filter" value="wildfires" checked> Wild Fires</label></div>
+                    <div class="filter-row"><label><input type="checkbox" id="toggle-floods" class="category-filter" value="floods" checked> Floods</label></div>
+                    <div class="filter-row"><label><input type="checkbox" id="toggle-clusters" class="category-filter"> Show clusters</label></div>
+                    <div class="filter-row cluster-k-row"><label for="cluster-k">Clusters (k):</label><input id="cluster-k" type="number" value="4" min="2" max="12" /></div>
+                    <div class="filter-row"><div id="cluster-spinner" class="spinner small hidden" aria-hidden="true" aria-label="Clustering"></div></div>
+                </section>
+            </div>
+        </aside>
+        
         <div id="map" class="map"></div>
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="earthquake_model.js"></script>
     <script src="script.js"></script>
 </body>
 
