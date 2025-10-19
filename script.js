@@ -109,17 +109,20 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
         });
 });
 
-function getHeatWaveData(lat, lon, placeName = "Searched Location") {
-  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+function getHeatwaveData(lat, lon) {
+  fetch(`https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
     .then(response => response.json())
     .then(data => {
-      console.log("Heatwave API response:", data); // for debugging
-      displayHeatWaves(data, lat, lon, placeName); // call display function
+      const temp = data.data[0].temp;
+      if (temp >= 35) {
+        L.marker([lat, lon], { icon: redIcon })
+          .addTo(map)
+          .bindPopup(`<b>Temperature:</b> ${temp}°C`);
+      }
     })
-    .catch(error => {
-      console.error('Error fetching heat wave data:', error);
-    });
+    .catch(error => console.error('Error fetching heatwave data:', error));
 }
+
 
 function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     clearMarkers(heatwaveMarkers);
