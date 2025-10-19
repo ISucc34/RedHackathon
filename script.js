@@ -1,11 +1,15 @@
-let map = L.map('map').setView([31.0, -100.0], 6); // Create Texas map
+// Initialize the map centered on Texas
+let map = L.map('map').setView([31.0, -100.0], 6);
+
+// Add OpenStreetMap base tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// Earthquake markers array
 let earthquakeMarkers = [];
-let wildfireMarkers = [];
 
+// Blue icon for earthquakes
 const blueIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -15,13 +19,12 @@ const blueIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const redIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+// Wildfire layer (NASA FIRMS WMS)
+let wildfireLayer = L.tileLayer.wms('https://firms.modaps.eosdis.nasa.gov/wms/active_fire', {
+  layers: 'fires_modis_24',
+  format: 'image/png',
+  transparent: true,
+  attribution: 'NASA FIRMS MODIS Active Fires'
 });
 
 // Fetch and display earthquakes
@@ -52,38 +55,7 @@ function displayEarthquakes(data) {
   });
 }
 
-// Fetch and display wildfires using NASA FIRMS data (global)
-function getWildfires() {
-  // NASA FIRMS open GeoJSON for past 24 hours (MODIS, global)
-  const url = 'https://firms.modaps.eosdis.nasa.gov/mapserver/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=firms:modis_24&outputFormat=application/json';
-
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      displayWildfires(data);
-    })
-    .catch(error => console.error('Error fetching wildfires:', error));
-}
-
-function displayWildfires(data) {
-  clearMarkers(wildfireMarkers);
-  data.features.forEach(fire => {
-    const [lon, lat] = fire.geometry.coordinates;
-    const brightness = fire.properties.brightness;
-    const date = fire.properties.acq_date;
-    const time = fire.properties.acq_time;
-
-    let marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
-      .bindPopup(`
-        <b>Wildfire Detected</b><br>
-        <b>Brightness:</b> ${brightness}<br>
-        <b>Date:</b> ${date}<br>
-        <b>Time:</b> ${time}
-      `);
-    wildfireMarkers.push(marker);
-  });
-}
-
+// Clear markers utility
 function clearMarkers(markerArray) {
   markerArray.forEach(marker => map.removeLayer(marker));
   markerArray.length = 0;
@@ -115,7 +87,7 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
     });
 });
 
-// Checkbox filters
+// Checkbox event handlers
 document.getElementById('toggle-earthquakes').addEventListener('change', function () {
   if (this.checked) {
     getEarthquakes();
@@ -126,12 +98,16 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
 
 document.getElementById('toggle-wildfires').addEventListener('change', function () {
   if (this.checked) {
-    getWildfires();
+    wildfireLayer.addTo(map);
   } else {
-    clearMarkers(wildfireMarkers);
+    map.removeLayer(wildfireLayer);
   }
 });
 
-// Load disasters by default
-getEarthquakes();
-getWildfires();
+// Load earthquakes and wildfire layer by default if checkboxes are checked
+if (document.getElementById('toggle-earthquakes').checked) {
+  getEarthquakes();
+}
+if (document.getElementById('toggle-wildfires').checked) {
+  wildfireLayer.addTo(map);
+}
