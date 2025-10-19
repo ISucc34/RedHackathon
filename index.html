@@ -5,21 +5,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nature Calls</title>
-  <style>
-  body {
-  background-color: whitesmoke;
-  font-family: "Skia Regular", sans-serif;
-}
-  </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="style.css" rel="stylesheet"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BBH+Sans+Bartle&family=BBH+Sans+Bogle&family=Exo+2:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <style>
+  body {
+  background-color: rgb(255, 255, 255);
+  font-family: 'Exo 2', sans-serif;
+  margin-top: 60px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+  </style>
+
 </head>
 
 <body>
 
     <div class="topnav">
-        <h1 class="title">Nature Calls</h1>
-    </div>
+        <div class="nav-center">
+            <h1 style="font-family: 'BBH Sans Bartle', Gadget, sans-serif;" class="nav-title">NATURE CALLS</h1>
+        </div>
+        <div class="line"></div> 
+      </div>
 
     <div class="container"> 
         <div class="sidebar">
@@ -28,27 +40,14 @@
                 <input type="search" id="gsearch" name="gsearch">
                 <button type = "submit" class = "search-btn">Enter</button>
             </form>
-            
-            <!-- Earthquake Prediction Section -->
-            <div class="prediction-section">
-                <h2>🔮 Earthquake Predictions</h2>
-                <div class="prediction-controls">
-                    <label for="prediction-year">Predict for Year:</label>
-                    <input type="number" id="prediction-year" value="2025" min="2024" max="2030" class="year-input">
-                    <button id="predict-button" class="predict-btn">Predict</button>
-                </div>
-                <div id="prediction-results" class="prediction-results">
-                    <div id="prediction-output">Select a year to see earthquake predictions</div>
-                    <div id="model-info" class="model-info"></div>
-                </div>
-            </div>
+
             <h2>Marker Key</h2>
             <h3>
                 <ul>
                     <li style = "color: #008000;">Earthquakes</li>
-                    <li style = "color: #FF0000;">Heat Waves</li>
-                    <li style = "color: #800080;">Wild Fires</li>
-                    <li style = "color: #0000FF;">Floods</li>
+                    <li style = "color: #940000;">Heat Waves</li>
+                    <li style = "color: #640064;">Wild Fires</li>
+                    <li style = "color: #000099;">Floods</li>
                 </ul>
             </h3>
             <h2>Filter</h2>
@@ -68,6 +67,20 @@
                     <input type="checkbox" id="toggle-floods" class="category-filter" value="floods" checked>
                     Floods
                 </label>
+                            
+            <!-- Earthquake Prediction Section -->
+            <div class="prediction-section">
+                <h2>🔮 Earthquake Predictions</h2>
+                <div class="prediction-controls">
+                    <label for="prediction-year">Predict for Year:</label>
+                    <input type="number" id="prediction-year" value="2025" min="2024" max="2030" class="year-input">
+                    <button id="predict-button" class="predict-btn">Predict</button>
+                </div>
+                <div id="prediction-results" class="prediction-results">
+                    <div id="prediction-output">Select a year to see earthquake predictions</div>
+                    <div id="model-info" class="model-info"></div>
+                </div>
+            </div>
         </div>
         <div id="map" class="map"></div>
     </div>
