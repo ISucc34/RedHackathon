@@ -9,6 +9,7 @@ let earthquakeData;
 let wildfireMarkers = [];
 let earthquakeMarkers = [];
 let heatwaveMarkers = [];
+let floodMarkers = [];
 
 // Custom icons
 const greenIcon = new L.Icon({
@@ -19,14 +20,14 @@ const greenIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
-const redIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-red.png',
+/*const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
-});
+});*/
 const purpleIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -138,8 +139,16 @@ function getHeatWaveData(lat, lon) {
       console.log(`Fetched temperature for heatwave marker: ${temp}°C at [${lat}, ${lon}]`);
       // Lower threshold for marking as a heatwave
       if (temp >= 10) {
-        console.log('Adding heatwave marker:', lat, lon, temp);
-        const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
+        let icon = redIcon;
+        // Fallback: if redIcon fails, use orangeIcon
+        const img = new Image();
+        img.src = redIcon.options.iconUrl;
+        img.onerror = function() {
+          console.log('Red icon failed to load, using orange icon for heatwave marker');
+          icon = orangeIcon;
+        };
+        console.log('Using icon URL for heatwave marker:', icon.options.iconUrl);
+        const marker = L.marker([lat, lon], { icon }).addTo(map)
           .bindPopup(`<b>Temperature:</b> ${temp}°C`);
         heatwaveMarkers.push(marker);
       } else {
@@ -190,13 +199,13 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
     }
 });
 
-document.getElementById('toggle-heatwaves').addEventListener('change', function() {
+/*document.getElementById('toggle-heatwaves').addEventListener('change', function() {
   if (this.checked) {
     // Optionally, you could refresh heatwave markers here
   } else {
     clearMarkers(heatwaveMarkers);
   }
-});
+});*/
 
 // Wildfires toggle (new checkbox added in index.html)
 document.getElementById('toggle-wildfires').addEventListener('change', function() {
@@ -221,9 +230,13 @@ function getWildfiresForTexas() {
       const lon = coords[0];
       const lat = coords[1];
       const title = event.title || 'Wildfire';
-        const marker = L.marker([lat, lon], { icon: purpleIcon }).addTo(map).bindPopup(`<b>${title}</b><br>${event.description || ''}`);
-        wildfireMarkers.push(marker);
-let floodMarkers = [];
+      const marker = L.marker([lat, lon], { icon: purpleIcon }).addTo(map).bindPopup(`<b>${title}</b><br>${event.description || ''}`);
+      wildfireMarkers.push(marker);
+    });
+  })
+  .catch(err => console.error('Error fetching wildfires:', err));
+}
+
 document.getElementById('toggle-floods').addEventListener('change', function() {
   if (this.checked) {
     getFloodsForTexas();
@@ -254,7 +267,4 @@ function getFloodsForTexas() {
     })
     .catch(err => console.error('Error fetching floods:', err));
 }
-    });
-    })
-    .catch(err => console.error('Error fetching wildfires:', err));
 }
