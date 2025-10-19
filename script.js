@@ -109,20 +109,16 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
         });
 });
 
-function getHeatWaveData(lat, lon) {
-  fetch(`https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
-    .then(response => response.json())
-    .then(data => {
-      const temp = data.data[0].temp;
-      if (temp >= 20) {
-        L.marker([lat, lon], { icon: redIcon })
-          .addTo(map)
-          .bindPopup(`<b>Temperature:</b> ${temp}°C`);
-      }
-    })
-    .catch(error => console.error('Error fetching heatwave data:', error));
+function getHeatWaveData(lat, lon, placeName = "Current Location") {
+    // Using Open-Meteo API (free, no API key needed!)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Heat wave data:', data);
+            displayHeatWaves(data, lat, lon, placeName);
+        })
+        .catch(error => console.error('Error fetching heatwave data:', error));
 }
-
 
 function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     clearMarkers(heatwaveMarkers);
@@ -143,6 +139,7 @@ function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
             <b>Time:</b> ${time.toLocaleString()}
           `);
         heatwaveMarkers.push(marker);
+        console.log(`Heat wave marker added at ${placeName}: ${temp}°C`);
     } else {
       console.log(`Temperature at ${placeName} is only ${temp}°C – not a heatwave.`);
     }
