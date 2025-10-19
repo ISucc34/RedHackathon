@@ -1,7 +1,13 @@
-// Initialize map old
-let map = L.map('map').setView([31.0, -100.0], 6);
+let map = L.map('map', {
+  zoomControl: false 
+}).setView([31.0, -100.0], 6);
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+L.control.zoom({
+  position: 'bottomright'
 }).addTo(map);
 
 // Data holders & marker arrays
