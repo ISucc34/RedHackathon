@@ -13,23 +13,23 @@ let floodMarkers = [];
 
 // Custom icons
 const greenIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-green.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
-/*const redIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+const redIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-red.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
-});*/
+});
 const purpleIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
+  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-violet.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -37,7 +37,7 @@ const purpleIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 const blueIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -139,16 +139,7 @@ function getHeatWaveData(lat, lon) {
       console.log(`Fetched temperature for heatwave marker: ${temp}°C at [${lat}, ${lon}]`);
       // Lower threshold for marking as a heatwave
       if (temp >= 10) {
-        let icon = redIcon;
-        // Fallback: if redIcon fails, use orangeIcon
-        const img = new Image();
-        img.src = redIcon.options.iconUrl;
-        img.onerror = function() {
-          console.log('Red icon failed to load, using orange icon for heatwave marker');
-          icon = orangeIcon;
-        };
-        console.log('Using icon URL for heatwave marker:', icon.options.iconUrl);
-        const marker = L.marker([lat, lon], { icon }).addTo(map)
+        const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`<b>Temperature:</b> ${temp}°C`);
         heatwaveMarkers.push(marker);
       } else {
