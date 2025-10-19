@@ -705,7 +705,7 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
 document.getElementById('toggle-heatwaves').addEventListener('change', function() {
   if (this.checked) {
     getHeatWavesForTexas(); // or re-fetch if you want
-    addCenterHeatMarker();
+    //addCenterHeatMarker();
     if (heatLayer && heatPoints.length > 0) {
       heatLayer.addTo(map);
     }
