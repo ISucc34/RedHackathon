@@ -22,7 +22,7 @@
     <div class="container"> 
         <div class="sidebar">
             <h2>Please Enter Your City</h2>
-            <form action="/action_page.php">
+            <form id="search-form">
                 <input type="search" id="gsearch" name="gsearch">
                 <button type = "submit" class = "search-btn">Enter</button>
             </form>
@@ -33,12 +33,10 @@
                     Earthquakes
                 </label>
         </div>
-        <div id="map">
-            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-            <script src="script.js"></script>
-        </div>
+        <div id="map"></div>
     </div>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
 </body>
 
 
