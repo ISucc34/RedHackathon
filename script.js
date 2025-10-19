@@ -109,7 +109,7 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
         });
 });
 
-function getHeatwaveData(lat, lon) {
+function getHeatWaveData(lat, lon) {
   fetch(`https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
     .then(response => response.json())
     .then(data => {
