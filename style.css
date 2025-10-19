@@ -1,13 +1,15 @@
 .topnav {
   background-color: rgb(172, 211, 222);
   overflow: hidden;
-  border: 1px solid #000000;
+  border: 1px solid #a7a7a7;
 }
 
 .container {
   display: flex;
   align-items: stretch;
-  height: 100vh; 
+  flex-direction: row;
+  gap: 20px;
+  height: 100vh;
   margin: 0;
 }
 
@@ -20,9 +22,10 @@
 }
 
 .sidebar {
+  border-radius: 25px;
   width: 400px;
   background-color: #f0f0f0; 
-  border-right: 1px solid #000000;
+  border: 1px solid #a7a7a7;
   overflow-y: auto;
 }
 
@@ -32,6 +35,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  column-gap: 20px;
 }
 
 #map {
