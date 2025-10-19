@@ -11,6 +11,24 @@ let heatWaveData;
 let earthquakeMarkers = [];
 let heatwaveMarkers = [];
 
+const blueIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 function getEarthquakes() {
     fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')//all earthquakes in the past 24 hours
         .then(response => response.json()) //convert response from text format to useable javascript object
@@ -33,8 +51,8 @@ function displayEarthquakes(data) {
         let mag = quake.properties.mag;
         let place = quake.properties.place;
         let time = new Date(quake.properties.time);
-        
-        let marker = L.marker([lat, lon]).addTo(map)
+
+        let marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
             .bindPopup(`
                 <b>Magnitude:</b> ${mag}<br>
                 <b>Location:</b> ${place}<br>
@@ -44,9 +62,12 @@ function displayEarthquakes(data) {
     });
 }
 
-
 // Load earthquakes when page loads
 getEarthquakes();
+if (document.getElementById('toggle-heatwaves').checked) {
+    const center = map.getCenter();
+    getHeatWaveData(center.lat, center.lng);
+}
 
 // Step 1: Handle search form submission
 document.getElementById('search-form').addEventListener('submit', function (e) { //this finds the HTML element with the id 'search-form'; and it sets up a listener that waits for the form submission event (submit); and runs when submitted
@@ -111,8 +132,8 @@ function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     const temp = weather.temperature;
     const time = new Date(weather.time);
 
-    if (temp >= 35) {
-        let marker = L.marker([lat, lon]).addTo(map)
+    if (temp >= 20) {
+        let marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`
             <b>Temperature:</b> ${temp} °C<br>
             <b>Location:</b> ${placeName}<br>
@@ -123,6 +144,7 @@ function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
       console.log(`Temperature at ${placeName} is only ${temp}°C – not a heatwave.`);
     }
 }
+
 
 function clearMarkers(markerArray) {
     markerArray.forEach(marker => map.removeLayer(marker));
