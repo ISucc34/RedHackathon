@@ -52,9 +52,9 @@ function displayEarthquakes(data) {
 getEarthquakes();
 
 // Step 1: Handle search form submission
-document.getElementById('search-form').addEventListener('submit', function (e) {
+document.getElementById('search-form').addEventListener('submit', function (e) { //this finds the HTML element with the id 'search-form'; and it sets up a listener that waits for the form submission event (submit); and runs when submitted
     e.preventDefault(); // Prevent form from reloading the page
 
-    const query = document.getElementById('gsearch').value;
+    const query = document.getElementById('gsearch').value; //store what searched into query
     console.log("User searched for:", query); // Just testing for now
 });
