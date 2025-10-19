@@ -8,7 +8,7 @@
   <style>
   body {
   background-color: #f0f0f0;
-  font-family: "courier new", monospace;
+  font-family: "Party Let", "Snell Roundhand", sans-serif;
 }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -31,19 +31,19 @@
             <h2>Marker Key</h2>
             <h3>
                 <ul>
-                    <li style = "color: #0000FF;">Hurricanes</li>
+                    <li style = "color: #0000FF;">Earthquakes</li>
                     <li style = "color: #FF0000;">Heat Waves</li>
                 </ul>
             </h3>
             <h2>Filter</h2>
-            <label>
-              <input type="checkbox" id="toggle-earthquakes" checked>
-              Earthquakes
-            </label><br>
-            <label>
-              <input type="checkbox" id="toggle-heatwaves" checked>
-              Heatwaves
-            </label>
+                <label>
+                    <input type = "checkbox" class = "category-filter" value = "earthquakes" unchecked>
+                    Hurricanes
+                </label><br>
+                <label>
+                    <input type = "checkbox" class = "category-filter" value = "heat wave" unchecked>
+                    Heat Wave
+                </label>
         </div>
         <div id="map"></div>
     </div>
