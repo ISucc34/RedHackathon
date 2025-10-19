@@ -132,7 +132,7 @@ function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     const temp = weather.temperature;
     const time = new Date(weather.time);
 
-    if (temp >= 35) {
+    if (temp >= 20) {
         let marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`
             <b>Temperature:</b> ${temp} °C<br>
