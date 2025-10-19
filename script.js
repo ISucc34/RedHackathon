@@ -164,8 +164,10 @@ function clearMarkers(markerArray) {
 
 // Toggle logic and startup
 getEarthquakes();
-// Load wildfires by default as well:
+// Load wildfires and heatwave markers by default
 getWildfiresForTexas();
+const center = map.getCenter();
+getHeatWaveData(center.lat, center.lng);
 
 // Example toggles — ensure you have the correct checkboxes in HTML with IDs
 document.getElementById('toggle-earthquakes').addEventListener('change', function() {
@@ -177,9 +179,41 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
 });
 
 document.getElementById('toggle-heatwaves').addEventListener('change', function() {
-    if (this.checked) {
-        getWildfiresForTexas();
-    } else {
-        clearMarkers(wildfireMarkers);
-    }
+  if (this.checked) {
+    const c = map.getCenter();
+    getHeatWaveData(c.lat, c.lng);
+  } else {
+    clearMarkers(heatwaveMarkers);
+  }
 });
+
+// Wildfires toggle (new checkbox added in index.html)
+document.getElementById('toggle-wildfires').addEventListener('change', function() {
+  if (this.checked) {
+    getWildfiresForTexas();
+  } else {
+    clearMarkers(wildfireMarkers);
+  }
+});
+
+// Fetch wildfires using NASA EONET API (open data) for the Texas bounding box
+function getWildfiresForTexas() {
+  clearMarkers(wildfireMarkers);
+  const bbox = '-106.645646,25.837377,-93.508039,36.500704'; // TX bounding box
+  fetch(`https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&bbox=${bbox}`)
+    .then(res => res.json())
+    .then(data => {
+    if (!data.events) return;
+    data.events.forEach(event => {
+      const coords = event.geometry?.[0]?.coordinates;
+      if (!coords) return;
+      const lon = coords[0];
+      const lat = coords[1];
+      const title = event.title || 'Wildfire';
+      const marker = L.marker([lat, lon], { icon: orangeIcon }).addTo(map)
+      .bindPopup(`<b>${title}</b><br>${event.description || ''}`);
+      wildfireMarkers.push(marker);
+    });
+    })
+    .catch(err => console.error('Error fetching wildfires:', err));
+}
