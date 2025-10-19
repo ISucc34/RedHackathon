@@ -10,11 +10,11 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=BBH+Sans+Bartle&family=BBH+Sans+Bogle&family=Exo+2:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=BBH+Sans+Bartle&family=BBH+Sans+Bogle&family=Exo+2:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
   body {
   background-color: rgb(255, 255, 255);
-  font-family: 'Exo 2', sans-serif;
+  font-family: 'Inter', 'Exo 2', sans-serif;
   margin-top: 60px;
   height: 100vh;
   display: flex;
@@ -23,8 +23,6 @@
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="style.css" rel="stylesheet"/>
-    <!-- Add Inter font for improved typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -43,34 +41,25 @@
                 <input type="search" id="gsearch" name="gsearch">
                 <button type = "submit" class = "search-btn">Enter</button>
             </form>
-            <h2>Marker Key</h2>
-            <h3>
-                <ul>
-                    <li style = "color: #008000;">Earthquakes</li>
-                    <li style = "color: #FF0000;">Heat Waves</li>
-                    <li style = "color: #800080;">Wild Fires</li>
-                    <li style = "color: #0000FF;">Floods</li>
-                </ul>
-            </h3>
             <h2>Filter</h2>
-                <label>
+                <h3>
+                <label for="toggle-earthquakes" style="color: #008000;">
                     <input type="checkbox" id="toggle-earthquakes" class="category-filter" value="earthquakes" checked>
                     Earthquakes
                 </label><br>
-                <label>
+                <label style="color: #a70101;">
                     <input type="checkbox" id="toggle-heatwaves" class="category-filter" value="heatwaves" checked>
                     Heat Waves
                 </label><br>
-                <label>
+                <label style="color: #800080;">
                     <input type="checkbox" id="toggle-wildfires" class="category-filter" value="wildfires" checked>
                     Wild Fires
                 </label><br>
-                <label>
+                <label style="color: #0101b9;">
                     <input type="checkbox" id="toggle-floods" class="category-filter" value="floods" checked>
                     Floods
-                </label>
-                <br>
-                <label>
+                </label> <br> </h3>
+                <br><label>
                     <input type="checkbox" id="toggle-clusters" class="category-filter">
                     Show Earthquake Clusters
                 </label>
