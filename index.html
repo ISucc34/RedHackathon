@@ -19,30 +19,27 @@
 
   <h1 class="title">Nature Calls</h1>
 
-  <div class="container"> 
-    <div class="sidebar">
-      <h2>Please Enter Your City</h2>
-      <form id="search-form"> <!-- Added id and removed action -->
-        <input type="search" id="gsearch" name="gsearch" placeholder="Enter city name" required>
-        <button type="submit" class="search-btn">Enter</button>
-      </form>
-
-      <h2>Key</h2>
-      <ul>
-        <li>Filter</li>
-        <label>
-          <input type="checkbox" class="category-filter" value="earthquakes" checked>
-          Hurricanes
-        </label>
-      </ul>
+    <div class="container"> 
+        <div class="sidebar">
+            <h2>Please Enter Your City</h2>
+            <form action="/action_page.php">
+                <input type="search" id="gsearch" name="gsearch">
+                <button type = "submit" class = "search-btn">Enter</button>
+            </form>
+            <h2>Key</h2>
+            <ul>
+                <li>Filter</li>
+                <label>
+                    <input type = "checkbox" class = "category-filter" value = "earthquakes" checked>
+                    Hurricanes
+                </label>
+            </ul>
+        </div>
+        <div id="map">
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <script src="script.js"></script>
+        </div>
     </div>
-    
-    <div id="map"></div> <!-- Just the map container -->
-  </div>
-
-  <!-- Leaflet JS and your script.js should go here -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="script.js"></script>
 
 </body>
 
