@@ -5,12 +5,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 //url is where leaflet is getting the images from
 //attribution is giving credit to the source of the images; and then we add it to the map
 
-/*L.marker([29.7604, -95.3698]).addTo(map)
-    .bindPopup('Test Marker - Houston')
-    .openPopup();*/
-
-
 let earthquakeData; //hold earthquake info
+let heatWaveData;
 function getEarthquakes() {
     fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')//all earthquakes in the past 24 hours
         .then(response => response.json()) //convert response from text format to useable javascript object
@@ -58,7 +54,7 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
     const query = document.getElementById('gsearch').value; //store what searched into query
     console.log("User searched for:", query); // Just testing for now
     // Fetch coordinates from Nominatim API
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`) //send request to open street Openstreet Nominatim API to search for geographic data.
         .then(response => response.json())
         .then(data => {
             if (data.length > 0) {
@@ -82,3 +78,36 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
             alert("Failed to get location data. Try again later.");
         });
 });
+
+function getHeatWaveData(lat, lon, placeName = "Searched Location") {
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+    .then(response => response.json())
+    .then(data => {
+      heatWaveData = data; // store the data
+      displayHeatWaves(heatWaveData, lat, lon, placeName); // pass lat, lon, and location name
+    })
+    .catch(error => {
+      console.error('Error fetching heat wave data:', error);
+    });
+}
+function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
+    // Extract current weather info
+    const weather = data.current_weather;
+    if (!weather) {
+        console.log("No current weather data found.");
+        return;
+    }
+
+    // Temperature and time
+    const temp = weather.temperature;
+    const time = new Date(weather.time);
+
+    // Create or update a marker at this location
+    L.marker([lat, lon], { icon: heatwaveIcon }).addTo(map)
+      .bindPopup(`
+        <b>Temperature:</b> ${temp} °C<br>
+        <b>Location:</b> ${placeName}<br>
+        <b>Time:</b> ${time.toLocaleString()}
+      `).openPopup();
+}
+
