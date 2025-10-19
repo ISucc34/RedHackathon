@@ -1,7 +1,7 @@
 .topnav {
   background-color: #0f6d00;
   overflow: hidden;
-  border: 2px solid #000000;
+  border: 1px solid #000000;
 }
 
 .container {
@@ -12,7 +12,7 @@
 }
 
 .title {
-  font-size: 50px;
+  font-size: 20px;
   color: #000000;
   text-align: center;
   -webkit-text-fill-color: rgb(255, 255, 255);
