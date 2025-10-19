@@ -57,4 +57,28 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
 
     const query = document.getElementById('gsearch').value; //store what searched into query
     console.log("User searched for:", query); // Just testing for now
+    // Fetch coordinates from Nominatim API
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                const lat = data[0].lat;
+                const lon = data[0].lon;
+                console.log(`Coordinates: ${lat}, ${lon}`);
+
+                // Move the map to these coordinates and zoom in
+                map.setView([lat, lon], 12);
+
+                // Optionally, add a marker at the searched location
+                L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`Search result: ${query}`)
+                    .openPopup();
+            } else {
+                alert("Location not found. Please try again.");
+            }
+        })
+        .catch(error => {
+            console.error("Error with geocoding:", error);
+            alert("Failed to get location data. Try again later.");
+        });
 });
