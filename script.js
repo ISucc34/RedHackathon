@@ -25,7 +25,6 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-
 // Fetch and display earthquakes
 function getEarthquakes() {
   fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')
@@ -69,10 +68,7 @@ function getWildfires() {
 function displayWildfires(data) {
   clearMarkers(wildfireMarkers);
   data.features.forEach(fire => {
-    const [lat, lon] = fire.geometry.coordinates; // Note NASA FIRMS uses [lat, lon] or [lon, lat]? Confirmed below.
-    // FIRMS uses [longitude, latitude], same as GeoJSON spec
-    // So we need [lat, lon] for Leaflet marker
-    const coords = fire.geometry.coordinates;
+    const coords = fire.geometry.coordinates; // [longitude, latitude]
     const latitude = coords[1];
     const longitude = coords[0];
 
