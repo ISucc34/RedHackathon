@@ -714,7 +714,7 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
     }
 });
 
-document.getElementById('toggle-heatwaves').addEventListener('change', function() {
+/*document.getElementById('toggle-heatwaves').addEventListener('change', function() {
   if (this.checked) {
     getHeatWavesForTexas(); // or re-fetch if you want
     addCenterHeatMarker();
@@ -727,7 +727,23 @@ document.getElementById('toggle-heatwaves').addEventListener('change', function(
     removeCenterHeatMarker();
     clearHeatLayer();
   }
+});*/
+
+document.getElementById('toggle-heatwaves').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    // Show heatwaves
+    if (!heatLayer) {
+      heatLayer = L.heatLayer(heatPoints, { radius: 25 });
+    }
+    heatLayer.addTo(map);
+    heatwaveMarkers.forEach(marker => marker.addTo(map));
+  } else {
+    // Hide heatwaves
+    if (heatLayer) map.removeLayer(heatLayer);
+    heatwaveMarkers.forEach(marker => map.removeLayer(marker));
+  }
 });
+
 
 // Wildfires toggle (new checkbox added in index.html)
 document.getElementById('toggle-wildfires').addEventListener('change', function() {
