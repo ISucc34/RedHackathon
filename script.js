@@ -283,7 +283,9 @@ if (document.getElementById('toggle-heatwaves').checked) {
   getHeatWavesForTexas();
 }
 // Always add the center red heat marker so it's visible on load
-addCenterHeatMarker();
+if (document.getElementById('toggle-heatwaves').checked) {
+  addCenterHeatMarker();
+}
 
 // Function: sample a grid across Texas using Open-Meteo batch queries and add red markers for high temps
 function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
@@ -407,13 +409,20 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
     }
 });
 
-/*document.getElementById('toggle-heatwaves').addEventListener('change', function() {
+document.getElementById('toggle-heatwaves').addEventListener('change', function() {
   if (this.checked) {
-    // Optionally, you could refresh heatwave markers here
-  } else {
-    clearMarkers(heatwaveMarkers);
+    getHeatWavesForTexas(); // or re-fetch if you want
+    addCenterHeatMarker();
+    if (heatLayer && heatPoints.length > 0) {
+      heatLayer.addTo(map);
+    }
   }
-});*/
+  else {
+    clearMarkers(heatwaveMarkers);
+    removeCenterHeatMarker();
+    clearHeatLayer();
+  }
+});
 
 // Wildfires toggle (new checkbox added in index.html)
 document.getElementById('toggle-wildfires').addEventListener('change', function() {
