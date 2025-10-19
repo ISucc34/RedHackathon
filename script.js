@@ -10,6 +10,9 @@ let wildfireMarkers = [];
 let earthquakeMarkers = [];
 let heatwaveMarkers = [];
 let floodMarkers = [];
+let heatLayer = null;
+let heatPoints = [];
+let centerHeatMarker = null;
 
 // Custom icons
 const greenIcon = new L.Icon({
@@ -79,6 +82,50 @@ function displayEarthquakes(data) {
         earthquakeMarkers.push(marker);
     });
 }
+function getEarthquakesNear(lat, lon, deltaDeg = 1.0) {
+  clearMarkers(earthquakeMarkers);
+
+  const minLon = lon - deltaDeg;
+  const minLat = lat - deltaDeg;
+  const maxLon = lon + deltaDeg;
+  const maxLat = lat + deltaDeg;
+
+  // Use the USGS API with bounds
+  const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${getPastDate(7)}&minlatitude=${minLat}&maxlatitude=${maxLat}&minlongitude=${minLon}&maxlongitude=${maxLon}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const earthquakes = data.features || [];
+      earthquakes.forEach(quake => {
+        const coords = quake.geometry.coordinates;
+        const lat = coords[1];
+        const lon = coords[0];
+        const mag = quake.properties.mag;
+        const place = quake.properties.place;
+        const time = new Date(quake.properties.time);
+
+        const marker = L.marker([lat, lon], { icon: greenIcon }).addTo(map)
+          .bindPopup(`
+            <b>Magnitude:</b> ${mag}<br>
+            <b>Location:</b> ${place}<br>
+            <b>Time:</b> ${time.toLocaleString()}
+          `);
+        earthquakeMarkers.push(marker);
+      });
+    })
+    .catch(error => {
+      console.error('Error fetching nearby earthquakes:', error);
+    });
+}
+
+// Helper to get a date string from X days ago (for USGS API)
+function getPastDate(daysAgo = 7) {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString().split('T')[0];
+}
+
 
 // Load earthquakes when page loads
 getEarthquakes();
@@ -86,6 +133,16 @@ getEarthquakes();
 if (document.getElementById('toggle-heatwaves').checked) {
     const center = map.getCenter();
     getHeatWaveData(center.lat, center.lng);
+}
+
+// Restore a single red heat marker at the current map center for visibility
+try {
+  const _mapCenter = map.getCenter();
+  const _centerHeatMarker = L.marker([_mapCenter.lat, _mapCenter.lng], { icon: redIcon }).addTo(map)
+    .bindPopup('<b>Center Heat Marker</b>');
+  heatwaveMarkers.push(_centerHeatMarker);
+} catch (e) {
+  console.error('Unable to add center heat marker:', e);
 }
 
 // Step 1: Handle search form submission
@@ -107,16 +164,23 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
                 map.setView([lat, lon], 12);
 
                 // Optionally, add a marker at the searched location
-                L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`Search result: ${query}`)
-                    .openPopup();
-                 // <<---- Add this block here ---->>
-                if (document.getElementById('toggle-heatwaves').checked) {
-                    getHeatWaveData(lat, lon, query);
-                }
-                if (document.getElementById('toggle-earthquakes').checked) {
-                    getEarthquakes();
-                }
+        const searchMarker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
+          .bindPopup(`<b>Search Result:</b> ${query}<br><b>Lat:</b> ${parseFloat(lat).toFixed(3)}, Lon: ${parseFloat(lon).toFixed(3)}`)
+          .openPopup();     
+        if (document.getElementById('toggle-heatwaves').checked) {
+          // Fetch heat data for a small area around the searched location
+          getHeatWavesNear(lat, lon, 0.5, 3, 30);
+        }
+        if (document.getElementById('toggle-earthquakes').checked) {
+          getEarthquakesNear(lat, lon, 1); // ~100km radius
+        }
+        // Also fetch nearby wildfires and floods around the searched location if toggled
+        if (document.getElementById('toggle-wildfires').checked) {
+          getWildfiresNear(lat, lon, 1); // 1 degree ~ ~111km
+        }
+        if (document.getElementById('toggle-floods').checked) {
+          getFloodsNear(lat, lon, 1);
+        }
             } 
             else {
                 alert("Location not found. Please try again.");
@@ -151,6 +215,35 @@ function getHeatWaveData(lat, lon) {
     .catch(error => console.error('Error fetching heatwave data:', error));
 }
 
+// Helper: sample a small grid around a point and mark heatwave candidates
+// centerLat, centerLon, radiusDeg, gridSize (odd number), thresholdC
+function getHeatWavesNear(centerLat, centerLon, radiusDeg = 0.5, gridSize = 3, thresholdC = 30) {
+  clearMarkers(heatwaveMarkers);
+  const half = Math.floor(gridSize / 2);
+  const promises = [];
+  for (let i = -half; i <= half; i++) {
+    for (let j = -half; j <= half; j++) {
+      const lat = centerLat + (i * (radiusDeg / half || 0));
+      const lon = centerLon + (j * (radiusDeg / half || 0));
+      // queue API call for each grid point
+      promises.push(fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius&timezone=UTC`)
+        .then(res => res.json())
+        .then(data => {
+          const temp = data.current_weather?.temperature;
+          if (temp === undefined) return;
+          console.log(`Heat sample at [${lat},${lon}] = ${temp}°C`);
+          if (temp >= thresholdC) {
+            const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
+              .bindPopup(`<b>Heatwave (sample):</b> ${temp}°C at [${lat.toFixed(3)}, ${lon.toFixed(3)}]`);
+            heatwaveMarkers.push(marker);
+          }
+        })
+        .catch(err => console.error('Error sampling heat data:', err)));
+    }
+  }
+  Promise.all(promises).then(() => console.log('Heat sampling complete.'));
+}
+
 
 function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     // Keep this helper for datasets that supply a full weather payload.
@@ -181,7 +274,125 @@ getEarthquakes();
 // Load wildfires and heatwave markers by default
 getWildfiresForTexas();
 const center = map.getCenter();
-getHeatWaveData(center.lat, center.lng);
+// On load, fetch heatwave candidates across Texas if heatwave toggle is checked
+if (document.getElementById('toggle-heatwaves').checked) {
+  getHeatWavesForTexas();
+}
+// Always add the center red heat marker so it's visible on load
+addCenterHeatMarker();
+
+// Function: sample a grid across Texas using Open-Meteo batch queries and add red markers for high temps
+function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
+  clearMarkers(heatwaveMarkers);
+  clearHeatLayer();
+  const minLon = -106.645646, minLat = 25.837377, maxLon = -93.508039, maxLat = 36.500704;
+  const lats = [];
+  const lons = [];
+  for (let lat = minLat; lat <= maxLat; lat = +(lat + stepDeg).toFixed(6)) lats.push(+lat.toFixed(6));
+  for (let lon = minLon; lon <= maxLon; lon = +(lon + stepDeg).toFixed(6)) lons.push(+lon.toFixed(6));
+
+  // Build coordinate pairs
+  const coords = [];
+  lats.forEach(lat => {
+    lons.forEach(lon => coords.push({ lat, lon }));
+  });
+
+  if (coords.length === 0) return;
+  console.log(`Sampling ${coords.length} points across Texas for heatwaves (step=${stepDeg}°)`);
+
+  const batchSize = 50; // number of coords per batch request
+  const batches = [];
+  for (let i = 0; i < coords.length; i += batchSize) batches.push(coords.slice(i, i + batchSize));
+
+  heatPoints = [];
+  const fetches = batches.map(batch => {
+    const latParam = batch.map(c => c.lat).join(',');
+    const lonParam = batch.map(c => c.lon).join(',');
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latParam}&longitude=${lonParam}&current_weather=true&temperature_unit=celsius&timezone=UTC`;
+    return fetch(url)
+      .then(res => res.json())
+      .then(resp => {
+        // resp may be an array (one item per input coord) or a single object when batch-size==1
+        if (Array.isArray(resp)) {
+          resp.forEach(item => {
+            const temp = item.current_weather?.temperature;
+            if (temp === undefined) return;
+            const lat = item.latitude ?? item.lat;
+            const lon = item.longitude ?? item.lon;
+            // compute intensity for heatmap (normalize a bit)
+            const intensity = Math.max(0, Math.min(1, (temp - (thresholdC - 5)) / 15));
+            heatPoints.push([lat, lon, intensity]);
+            if (temp >= thresholdC) {
+              const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
+                .bindPopup(`<b>Heatwave:</b> ${temp}°C at [${lat.toFixed(3)}, ${lon.toFixed(3)}]`);
+              heatwaveMarkers.push(marker);
+            }
+          });
+        } else if (resp && resp.current_weather) {
+          const temp = resp.current_weather.temperature;
+          if (temp >= thresholdC) {
+            const lat = resp.latitude ?? resp.lat ?? batch[0].lat;
+            const lon = resp.longitude ?? resp.lon ?? batch[0].lon;
+            const intensity = Math.max(0, Math.min(1, (temp - (thresholdC - 5)) / 15));
+            heatPoints.push([lat, lon, intensity]);
+            const marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
+              .bindPopup(`<b>Heatwave:</b> ${temp}°C at [${lat.toFixed(3)}, ${lon.toFixed(3)}]`);
+            heatwaveMarkers.push(marker);
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching heat batch:', err));
+  });
+
+  Promise.all(fetches).then(() => console.log(`Heat sampling complete. Markers added: ${heatwaveMarkers.length}`));
+  // after all fetches, render heatmap layer
+  Promise.all(fetches).then(() => {
+    if (heatPoints.length > 0) {
+      if (heatLayer) {
+        map.removeLayer(heatLayer);
+        heatLayer = null;
+      }
+      // Leaflet.heat expects [lat, lon, intensity]
+      heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 10 });
+      if (document.getElementById('toggle-heatwaves').checked) {
+        heatLayer.addTo(map);
+      }
+      console.log(`Heatmap rendered with ${heatPoints.length} points.`);
+    } else {
+      console.log('No heat points to render.');
+    }
+  });
+}
+
+function clearHeatLayer() {
+  if (heatLayer) {
+    try { map.removeLayer(heatLayer); } catch (e) {}
+    heatLayer = null;
+  }
+  heatPoints = [];
+}
+
+function addCenterHeatMarker() {
+  try {
+    // remove previous center marker if exists
+    if (centerHeatMarker) {
+      try { map.removeLayer(centerHeatMarker); } catch (e) {}
+      centerHeatMarker = null;
+    }
+    const c = map.getCenter();
+    centerHeatMarker = L.marker([c.lat, c.lng], { icon: redIcon }).bindPopup('<b>Center Heat Marker</b>');
+    if (document.getElementById('toggle-heatwaves').checked) centerHeatMarker.addTo(map);
+  } catch (e) {
+    console.error('Failed to add center heat marker:', e);
+  }
+}
+
+function removeCenterHeatMarker() {
+  if (centerHeatMarker) {
+    try { map.removeLayer(centerHeatMarker); } catch (e) {}
+    centerHeatMarker = null;
+  }
+}
 
 // Example toggles — ensure you have the correct checkboxes in HTML with IDs
 document.getElementById('toggle-earthquakes').addEventListener('change', function() {
@@ -228,6 +439,56 @@ function getWildfiresForTexas() {
     });
   })
   .catch(err => console.error('Error fetching wildfires:', err));
+}
+
+// Helper: fetch wildfires near a point using a small bbox
+function getWildfiresNear(lat, lon, deltaDeg = 0.5) {
+  clearMarkers(wildfireMarkers);
+  const minLon = lon - deltaDeg;
+  const minLat = lat - deltaDeg;
+  const maxLon = lon + deltaDeg;
+  const maxLat = lat + deltaDeg;
+  const bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
+  fetch(`https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&bbox=${bbox}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.events) return;
+      data.events.forEach(event => {
+        const coords = event.geometry?.[0]?.coordinates;
+        if (!coords) return;
+        const lon = coords[0];
+        const lat = coords[1];
+        const title = event.title || 'Wildfire';
+        const marker = L.marker([lat, lon], { icon: purpleIcon }).addTo(map).bindPopup(`<b>${title}</b><br>${event.description || ''}`);
+        wildfireMarkers.push(marker);
+      });
+    })
+    .catch(err => console.error('Error fetching nearby wildfires:', err));
+}
+
+// Helper: fetch floods near a point using a small bbox (EONET flood events)
+function getFloodsNear(lat, lon, deltaDeg = 0.5) {
+  clearMarkers(floodMarkers);
+  const minLon = lon - deltaDeg;
+  const minLat = lat - deltaDeg;
+  const maxLon = lon + deltaDeg;
+  const maxLat = lat + deltaDeg;
+  const bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
+  fetch(`https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=floods&bbox=${bbox}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.events) return;
+      data.events.forEach(event => {
+        const geometry = event.geometry?.find(g => g.coordinates && g.type === 'Point') || event.geometry?.[0];
+        if (!geometry || !geometry.coordinates) return;
+        const lon = geometry.coordinates[0];
+        const lat = geometry.coordinates[1];
+        const title = event.title || 'Flood Event';
+        const marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map).bindPopup(`<b>${title}</b><br>${event.description || ''}`);
+        floodMarkers.push(marker);
+      });
+    })
+    .catch(err => console.error('Error fetching nearby floods:', err));
 }
 
 function getFloods() {
