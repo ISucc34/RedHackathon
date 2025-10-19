@@ -50,3 +50,11 @@ function displayEarthquakes(data) {
 
 // Load earthquakes when page loads
 getEarthquakes();
+
+// Step 1: Handle search form submission
+document.getElementById('search-form').addEventListener('submit', function (e) {
+    e.preventDefault(); // Prevent form from reloading the page
+
+    const query = document.getElementById('gsearch').value;
+    console.log("User searched for:", query); // Just testing for now
+});
