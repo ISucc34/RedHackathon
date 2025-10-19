@@ -1,16 +1,15 @@
-let map = L.map('map').setView([31.0, -100.0], 6); //this creates our map of texas
+// Initialize map
+let map = L.map('map').setView([31.0, -100.0], 6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
-//url is where leaflet is getting the images from
-//attribution is giving credit to the source of the images; and then we add it to the map
 
-let earthquakeData; //hold earthquake info
-let heatWaveData;
-// Add these two arrays to keep track of your markers:
+// Data holders & marker arrays
+let earthquakeData;
+let wildfireMarkers = [];
 let earthquakeMarkers = [];
-let heatwaveMarkers = [];
 
+// Custom icons
 const blueIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -29,21 +28,22 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
+// Earthquake logic
 function getEarthquakes() {
-    fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')//all earthquakes in the past 24 hours
-        .then(response => response.json()) //convert response from text format to useable javascript object
-        .then(data => {
-            console.log('Earthquake data:', data);  // See data in console
-            displayEarthquakes(data);
-        })
-        .catch(error => { //runs if something goes wrong
-            console.error('Error fetching earthquakes:', error);
-        });
+    fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')
+      .then(response => response.json())
+      .then(data => {
+        console.log('Earthquake data:', data);
+        displayEarthquakes(data);
+      })
+      .catch(error => {
+        console.error('Error fetching earthquakes:', error);
+      });
 }
 
 function displayEarthquakes(data) {
     clearMarkers(earthquakeMarkers);
-    let earthquakes = data.features;
+    const earthquakes = data.features;
     earthquakes.forEach(quake => {
         let coords = quake.geometry.coordinates;
         let lat = coords[1];
@@ -53,11 +53,11 @@ function displayEarthquakes(data) {
         let time = new Date(quake.properties.time);
 
         let marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
-            .bindPopup(`
-                <b>Magnitude:</b> ${mag}<br>
-                <b>Location:</b> ${place}<br>
-                <b>Time:</b> ${time.toLocaleString()}
-            `);
+          .bindPopup(`
+            <b>Magnitude:</b> ${mag}<br>
+            <b>Location:</b> ${place}<br>
+            <b>Time:</b> ${time.toLocaleString()}
+          `);
         earthquakeMarkers.push(marker);
     });
 }
@@ -109,16 +109,20 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
         });
 });
 
-function getHeatWaveData(lat, lon, placeName = "Current Location") {
-    // Using Open-Meteo API (free, no API key needed!)
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('Heat wave data:', data);
-            displayHeatWaves(data, lat, lon, placeName);
-        })
-        .catch(error => console.error('Error fetching heatwave data:', error));
+function getHeatWaveData(lat, lon) {
+  fetch(`https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
+    .then(response => response.json())
+    .then(data => {
+      const temp = data.data[0].temp;
+      if (temp >= 20) {
+        L.marker([lat, lon], { icon: redIcon })
+          .addTo(map)
+          .bindPopup(`<b>Temperature:</b> ${temp}°C`);
+      }
+    })
+    .catch(error => console.error('Error fetching heatwave data:', error));
 }
+
 
 function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     clearMarkers(heatwaveMarkers);
@@ -134,12 +138,11 @@ function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
     if (temp >= 20) {
         let marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`
-            <b>Temperature:</b> ${temp} °C<br>
-            <b>Location:</b> ${placeName}<br>
-            <b>Time:</b> ${time.toLocaleString()}
+            <b>Brightness:</b> ${brightness}<br>
+            <b>Date:</b> ${acq_date} ${acq_time}<br>
+            <b>Location ID:</b> ${place}
           `);
         heatwaveMarkers.push(marker);
-        console.log(`Heat wave marker added at ${placeName}: ${temp}°C`);
     } else {
       console.log(`Temperature at ${placeName} is only ${temp}°C – not a heatwave.`);
     }
@@ -151,23 +154,24 @@ function clearMarkers(markerArray) {
     markerArray.length = 0;
 }
 
+// Toggle logic and startup
+getEarthquakes();
+// Load wildfires by default as well:
+getWildfiresForTexas();
+
+// Example toggles — ensure you have the correct checkboxes in HTML with IDs
 document.getElementById('toggle-earthquakes').addEventListener('change', function() {
     if (this.checked) {
-        getEarthquakes();  // Fetch and display earthquakes
+        getEarthquakes();
     } else {
-        clearMarkers(earthquakeMarkers);  // Remove earthquake markers
+        clearMarkers(earthquakeMarkers);
     }
 });
 
 document.getElementById('toggle-heatwaves').addEventListener('change', function() {
     if (this.checked) {
-        // You need to call getHeatWaveData with current map center or searched location coords
-        const center = map.getCenter();
-        getHeatWaveData(center.lat, center.lng);
+        getWildfiresForTexas();
     } else {
-        clearMarkers(heatwaveMarkers);
+        clearMarkers(wildfireMarkers);
     }
 });
-
-
-
