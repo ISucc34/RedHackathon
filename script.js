@@ -114,7 +114,7 @@ function getHeatwaveData(lat, lon) {
     .then(response => response.json())
     .then(data => {
       const temp = data.data[0].temp;
-      if (temp >= 35) {
+      if (temp >= 20) {
         L.marker([lat, lon], { icon: redIcon })
           .addTo(map)
           .bindPopup(`<b>Temperature:</b> ${temp}°C`);
