@@ -19,30 +19,26 @@
 
     <h1 class="title">Nature Calls</h1>
 
-  <div class="container"> 
-    <div class="sidebar">
-    <ul>
-      <h2>Search Map</h2>
-      <form id="search-form">
-        <input type="search" id="gsearch" name="gsearch" placeholder="Enter a location" required>
-        <button type="submit">Go</button>
-      </form>
-
-      <h2>Key</h2>
-        <h2>Filter</h2>
-        <label>
-          <input type="checkbox" class="category-filter" value="earthquakes" checked>
-          Hurricanes
-        </label>
-      </ul>
+    <div class="container"> 
+        <div class="sidebar">
+            <h2>Search Map</h2>
+            <form action="/action_page.php">
+                <input type="search" id="gsearch" name="gsearch">
+            </form>
+            <h2>Key</h2>
+            <ul>
+                <li>Filter</li>
+                <label>
+                    <input type = "checkbox" class = "category-filter" value = "earthquakes" checked>
+                    Hurricanes
+                </label>
+            </ul>
+        </div>
+        <div id="map">
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <script src="script.js"></script>
+        </div>
     </div>
-
-    <div id="map"></div>
-  </div>
-
-  <!-- Leaflet JS and your script -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="script.js"></script>
 
 </body>
 
