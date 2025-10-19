@@ -62,47 +62,93 @@ function displayEarthquakes(data) {
     });
 }
 
-// Wildfire logic (using NASA FIRMS)
-function getWildfiresForTexas() {
-    // Example: use a pre‑built URL for Texas/USA from FIRMS
-    // Replace with the appropriate URL for your desired region/time.
-    const url = 'https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6.1/geojson/MODIS_C6_1_USA_contiguous_and_Hawaii_24h.geojson';
-
-    fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        console.log('Wildfire data:', data);
-        displayWildfires(data);
-      })
-      .catch(error => {
-        console.error('Error fetching wildfires:', error);
-      });
+// Load earthquakes when page loads
+getEarthquakes();
+if (document.getElementById('toggle-heatwaves').checked) {
+    const center = map.getCenter();
+    getHeatWaveData(center.lat, center.lng);
 }
 
-function displayWildfires(data) {
-    clearMarkers(wildfireMarkers);
-    const fires = data.features;
+// Step 1: Handle search form submission
+document.getElementById('search-form').addEventListener('submit', function (e) { //this finds the HTML element with the id 'search-form'; and it sets up a listener that waits for the form submission event (submit); and runs when submitted
+    e.preventDefault(); // Prevent form from reloading the page
 
-    fires.forEach(fire => {
-        let coords = fire.geometry.coordinates;
-        let lat = coords[1];
-        let lon = coords[0];
-        let brightness = fire.properties.brightness;       // satellite brightness
-        let acq_date = fire.properties.acq_date;           // acquisition date
-        let acq_time = fire.properties.acq_time;           // acquisition time
-        let place = fire.properties.fire_id || "Fire hotspot";
+    const query = document.getElementById('gsearch').value; //store what searched into query
+    console.log("User searched for:", query); // Just testing for now
+    // Fetch coordinates from Nominatim API
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`) //send request to open street Openstreet Nominatim API to search for geographic data.
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                const lat = data[0].lat;
+                const lon = data[0].lon;
+                console.log(`Coordinates: ${lat}, ${lon}`);
 
+                // Move the map to these coordinates and zoom in
+                map.setView([lat, lon], 12);
+
+                // Optionally, add a marker at the searched location
+                L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`Search result: ${query}`)
+                    .openPopup();
+                 // <<---- Add this block here ---->>
+                if (document.getElementById('toggle-heatwaves').checked) {
+                    getHeatWaveData(lat, lon, query);
+                }
+                if (document.getElementById('toggle-earthquakes').checked) {
+                    getEarthquakes();
+                }
+            } 
+            else {
+                alert("Location not found. Please try again.");
+            }
+        })
+        .catch(error => {
+            console.error("Error with geocoding:", error);
+            alert("Failed to get location data. Try again later.");
+        });
+});
+
+function getHeatWaveData(lat, lon) {
+  fetch(`https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
+    .then(response => response.json())
+    .then(data => {
+      const temp = data.data[0].temp;
+      if (temp >= 20) {
+        L.marker([lat, lon], { icon: redIcon })
+          .addTo(map)
+          .bindPopup(`<b>Temperature:</b> ${temp}°C`);
+      }
+    })
+    .catch(error => console.error('Error fetching heatwave data:', error));
+}
+
+
+function displayHeatWaves(data, lat, lon, placeName = "Searched Location") {
+    clearMarkers(heatwaveMarkers);
+    const weather = data.current_weather;
+    if (!weather) {
+        console.log("No current weather data found.");
+        return;
+    }
+
+    const temp = weather.temperature;
+    const time = new Date(weather.time);
+
+    if (temp >= 20) {
         let marker = L.marker([lat, lon], { icon: redIcon }).addTo(map)
           .bindPopup(`
             <b>Brightness:</b> ${brightness}<br>
             <b>Date:</b> ${acq_date} ${acq_time}<br>
             <b>Location ID:</b> ${place}
           `);
-        wildfireMarkers.push(marker);
-    });
+        heatwaveMarkers.push(marker);
+    } else {
+      console.log(`Temperature at ${placeName} is only ${temp}°C – not a heatwave.`);
+    }
 }
 
-// Utility to clear marker arrays
+
 function clearMarkers(markerArray) {
     markerArray.forEach(marker => map.removeLayer(marker));
     markerArray.length = 0;
