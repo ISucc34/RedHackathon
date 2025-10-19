@@ -602,14 +602,15 @@ function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
     lons.forEach(lon => coords.push({ lat, lon }));
   });
 
-  if (coords.length === 0) return;
-  console.log(`Sampling ${coords.length} points across Texas for heatwaves (step=${stepDeg}°)`);
+  /*if (coords.length === 0) return;
+  console.log(`Sampling ${coords.length} points across Texas for heatwaves (step=${stepDeg}°)`);*/
+  if (coords.length === 0) return Promise.resolve();
 
   const batchSize = 50; // number of coords per batch request
   const batches = [];
   for (let i = 0; i < coords.length; i += batchSize) batches.push(coords.slice(i, i + batchSize));
 
-  heatPoints = [];
+  //heatPoints = [];
   const fetches = batches.map(batch => {
     const latParam = batch.map(c => c.lat).join(',');
     const lonParam = batch.map(c => c.lon).join(',');
@@ -648,26 +649,22 @@ function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
       })
       .catch(err => console.error('Error fetching heat batch:', err));
   });
-  Promise.all(fetches).then(() => {
-    heatLayer = L.heatLayer(heatPoints, { radius: 25 });
-    if (document.getElementById('toggle-heatwaves').checked && heatPoints.length > 0) {
-      heatLayer.addTo(map);
-    }
-  });
+   return Promise.all(fetches).then(() => {
+    console.log(`Heat sampling complete. Markers added: ${heatwaveMarkers.length}`);
 
-  Promise.all(fetches).then(() => console.log(`Heat sampling complete. Markers added: ${heatwaveMarkers.length}`));
-  // after all fetches, render heatmap layer
-  Promise.all(fetches).then(() => {
+    if (heatLayer) {
+      map.removeLayer(heatLayer);
+      heatLayer = null;
+    }
+
     if (heatPoints.length > 0) {
-      if (heatLayer) {
-        map.removeLayer(heatLayer);
-        heatLayer = null;
-      }
-      // Leaflet.heat expects [lat, lon, intensity]
       heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 10 });
+
       if (document.getElementById('toggle-heatwaves').checked) {
         heatLayer.addTo(map);
       }
+
+      heatwaveMarkers.forEach(marker => marker.addTo(map));
       console.log(`Heatmap rendered with ${heatPoints.length} points.`);
     } else {
       console.log('No heat points to render.');
@@ -714,36 +711,21 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
     }
 });
 
-/*document.getElementById('toggle-heatwaves').addEventListener('change', function() {
+document.getElementById('toggle-heatwaves').addEventListener('change', function () {
   if (this.checked) {
-    getHeatWavesForTexas(); // or re-fetch if you want
-    addCenterHeatMarker();
-    if (heatLayer && heatPoints.length > 0) {
-      heatLayer.addTo(map);
-    }
-  }
-  else {
-    clearMarkers(heatwaveMarkers);
-    removeCenterHeatMarker();
-    clearHeatLayer();
-  }
-});*/
-
-document.getElementById('toggle-heatwaves').addEventListener('change', (e) => {
-  if (e.target.checked) {
-    // Show heatwaves
-    if (!heatLayer) {
-      heatLayer = L.heatLayer(heatPoints, { radius: 25 });
-    }
-    heatLayer.addTo(map);
-    heatwaveMarkers.forEach(marker => marker.addTo(map));
+    getHeatWavesForTexas().then(() => {
+      if (heatLayer && heatPoints.length > 0) {
+        heatLayer.addTo(map);
+      }
+      heatwaveMarkers.forEach(marker => marker.addTo(map));
+      addCenterHeatMarker();
+    });
   } else {
-    // Hide heatwaves
-    if (heatLayer) map.removeLayer(heatLayer);
-    heatwaveMarkers.forEach(marker => map.removeLayer(marker));
+    clearMarkers(heatwaveMarkers);
+    clearHeatLayer();
+    removeCenterHeatMarker();
   }
 });
-
 
 // Wildfires toggle (new checkbox added in index.html)
 document.getElementById('toggle-wildfires').addEventListener('change', function() {
