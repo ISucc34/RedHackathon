@@ -114,6 +114,17 @@ html, body {
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 15px;
+  display: flex;
+  gap: 8px;
+  align-items: center; 
+  flex-wrap: wrap;
+}
+
+.button-group-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .year-input {
@@ -134,14 +145,17 @@ html, body {
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
-  margin-left: 10px;
   transition: transform 0.2s;
+  width: auto;
 }
+
 
 .predict-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 15px rgba(245,87,108,0.4);
 }
+
+
 
 .prediction-results {
   background: rgba(255,255,255,0.95);
@@ -261,7 +275,7 @@ body {
 
 .prediction-controls{ display:flex; gap:8px; align-items:center; }
 .year-input{ padding:8px; border-radius:8px; border:1px solid #e6eef0; width:90px;}
-.predict-btn{ background:var(--accent); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.predict-btn{ background: transparent; color: var(--accent); border: 1px solid rgba(245,87,108,0.15); }
 .predict-btn.secondary{ background: transparent; color: var(--accent); border: 1px solid rgba(245,87,108,0.15); }
 
 .legend-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
