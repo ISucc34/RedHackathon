@@ -1,3 +1,8 @@
+.topnav {
+  background-color: #0f6d00;
+  overflow: hidden;
+}
+
 .container {
   display: flex;
   align-items: stretch;
@@ -6,9 +11,11 @@
 }
 
 .title {
-  font-size: 40px;
+  font-size: 50px;
   color: #000000;
   text-align: center;
+  -webkit-text-fill-color: rgb(255, 255, 255);
+  -webkit-text-stroke: 2px;
 }
 
 .sidebar {
