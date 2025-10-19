@@ -11,7 +11,7 @@ let earthquakeMarkers = [];
 let heatwaveMarkers = [];
 
 // Custom icons
-const blueIcon = new L.Icon({
+const brownIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
@@ -62,7 +62,7 @@ function displayEarthquakes(data) {
         let place = quake.properties.place;
         let time = new Date(quake.properties.time);
 
-        let marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
+        let marker = L.marker([lat, lon], { icon: brownIcon }).addTo(map)
           .bindPopup(`
             <b>Magnitude:</b> ${mag}<br>
             <b>Location:</b> ${place}<br>
@@ -121,7 +121,6 @@ document.getElementById('search-form').addEventListener('submit', function (e) {
 
 function getHeatWaveData(lat, lon) {
   // Use Open-Meteo's free API for current temperature (no API key needed)
-  clearMarkers(heatwaveMarkers);
   fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius&timezone=UTC`)
     .then(response => response.json())
     .then(data => {
@@ -180,8 +179,7 @@ document.getElementById('toggle-earthquakes').addEventListener('change', functio
 
 document.getElementById('toggle-heatwaves').addEventListener('change', function() {
   if (this.checked) {
-    const c = map.getCenter();
-    getHeatWaveData(c.lat, c.lng);
+    // Optionally, you could refresh heatwave markers here
   } else {
     clearMarkers(heatwaveMarkers);
   }
