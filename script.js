@@ -611,7 +611,7 @@ function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
   for (let i = 0; i < coords.length; i += batchSize) batches.push(coords.slice(i, i + batchSize));
 
   //heatPoints = [];
-  /*const fetches = batches.map(batch => {
+  const fetches = batches.map(batch => {
     const latParam = batch.map(c => c.lat).join(',');
     const lonParam = batch.map(c => c.lon).join(',');
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${latParam}&longitude=${lonParam}&current_weather=true&temperature_unit=celsius&timezone=UTC`;
@@ -648,28 +648,8 @@ function getHeatWavesForTexas(stepDeg = 0.25, thresholdC = 30) {
         }
       })
       .catch(err => console.error('Error fetching heat batch:', err));
-  });*/
-  const fetches = coords.map(({ lat, lon }) => {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius&timezone=UTC`;
-  
-  return fetch(url)
-    .then(res => res.json())
-    .then(resp => {
-      const temp = resp.current_weather?.temperature;
-      if (temp === undefined) return;
-
-      const intensity = Math.max(0, Math.min(1, (temp - (thresholdC - 5)) / 15));
-      heatPoints.push([lat, lon, intensity]);
-
-      if (temp >= thresholdC) {
-        const marker = L.marker([lat, lon], { icon: redIcon })
-          .bindPopup(`<b>Heatwave:</b> ${temp}°C at [${lat.toFixed(3)}, ${lon.toFixed(3)}]`);
-        heatwaveMarkers.push(marker);
-      }
-    })
-    .catch(err => console.error('Error fetching heat data for', lat, lon, err));
-});
-   return Promise.all(fetches).then(() => {
+  });
+  return Promise.all(fetches).then(() => {
     console.log(`Heat sampling complete. Markers added: ${heatwaveMarkers.length}`);
 
     if (heatLayer) {
