@@ -278,3 +278,145 @@ document.getElementById('toggle-floods').addEventListener('change', function () 
   }
 });
 
+// ==========================================
+// EARTHQUAKE PREDICTION MODEL IMPLEMENTATION
+// ==========================================
+
+let earthquakePredictionModel;
+
+// Initialize the earthquake prediction model
+function initializePredictionModel() {
+    try {
+        earthquakePredictionModel = new EarthquakePredictionModel();
+        console.log('Earthquake prediction model loaded successfully');
+        
+        // Display model info
+        const modelInfo = earthquakePredictionModel.getModelInfo();
+        document.getElementById('model-info').innerHTML = `
+            <small>
+                <strong>Model:</strong> ${modelInfo.modelType}<br>
+                <strong>Accuracy:</strong> ${modelInfo.varianceExplained} of variance explained<br>
+                <strong>Trend:</strong> ${modelInfo.interpretation}
+            </small>
+        `;
+    } catch (error) {
+        console.error('Error loading prediction model:', error);
+        document.getElementById('prediction-results').innerHTML = 
+            '<div style="color: red;">Error: Prediction model not available</div>';
+    }
+}
+
+// Handle earthquake prediction
+function handleEarthquakePrediction() {
+    if (!earthquakePredictionModel) {
+        alert('Prediction model not loaded. Please refresh the page.');
+        return;
+    }
+    
+    const yearInput = document.getElementById('prediction-year');
+    const year = parseInt(yearInput.value);
+    
+    // Validate year
+    const validation = earthquakePredictionModel.validateYear(year);
+    if (!validation.valid) {
+        alert(validation.error);
+        return;
+    }
+    
+    // Make prediction
+    try {
+        const prediction = earthquakePredictionModel.predictSingleYear(year);
+        
+        // Display results
+        document.getElementById('prediction-output').innerHTML = `
+            <div class="prediction-result">
+                <h3>📊 Prediction for ${year}:</h3>
+                <div class="prediction-number">${prediction.toLocaleString()}</div>
+                <div class="prediction-label">Predicted Earthquakes</div>
+                <div class="prediction-trend">
+                    ${getPredictionTrend(year)}
+                </div>
+            </div>
+        `;
+        
+        // Also show multi-year trend
+        showMultiYearTrend(year);
+        
+        console.log(`Predicted ${prediction} earthquakes for ${year}`);
+    } catch (error) {
+        console.error('Error making prediction:', error);
+        alert('Error generating prediction. Please try again.');
+    }
+}
+
+// Get prediction trend information
+function getPredictionTrend(year) {
+    const currentYear = new Date().getFullYear();
+    const currentPrediction = earthquakePredictionModel.predictSingleYear(currentYear);
+    const yearPrediction = earthquakePredictionModel.predictSingleYear(year);
+    
+    const difference = yearPrediction - currentPrediction;
+    const percentChange = ((difference / currentPrediction) * 100).toFixed(1);
+    
+    if (difference > 0) {
+        return `📈 ${Math.abs(difference).toLocaleString()} more than ${currentYear} (+${percentChange}%)`;
+    } else if (difference < 0) {
+        return `📉 ${Math.abs(difference).toLocaleString()} fewer than ${currentYear} (${percentChange}%)`;
+    } else {
+        return `➡️ Similar to ${currentYear}`;
+    }
+}
+
+// Show multi-year trend
+function showMultiYearTrend(centerYear) {
+    const startYear = centerYear - 2;
+    const endYear = centerYear + 2;
+    const predictions = earthquakePredictionModel.predictYearRange(startYear, endYear);
+    
+    let trendHtml = '<div class="trend-section"><h4>5-Year Trend:</h4><ul>';
+    predictions.forEach(pred => {
+        const isCurrent = pred.year === centerYear;
+        const style = isCurrent ? 'font-weight: bold; color: #ff6b35;' : '';
+        trendHtml += `<li style="${style}">${pred.year}: ${pred.predictedEarthquakes.toLocaleString()}</li>`;
+    });
+    trendHtml += '</ul></div>';
+    
+    document.getElementById('prediction-output').innerHTML += trendHtml;
+}
+
+// Setup prediction controls
+function setupPredictionControls() {
+    const predictButton = document.getElementById('predict-button');
+    const yearInput = document.getElementById('prediction-year');
+    
+    if (predictButton) {
+        predictButton.addEventListener('click', handleEarthquakePrediction);
+    }
+    
+    if (yearInput) {
+        yearInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleEarthquakePrediction();
+            }
+        });
+        
+        // Auto-predict when year changes
+        yearInput.addEventListener('change', handleEarthquakePrediction);
+    }
+}
+
+// Initialize everything when page loads
+function initialize() {
+    initializePredictionModel();
+    setupPredictionControls();
+    
+    // Make initial prediction for current year
+    setTimeout(() => {
+        if (earthquakePredictionModel) {
+            handleEarthquakePrediction();
+        }
+    }, 500);
+}
+
+// Call initialize when page loads
+initialize();

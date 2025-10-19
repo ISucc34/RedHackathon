@@ -28,6 +28,20 @@
                 <input type="search" id="gsearch" name="gsearch">
                 <button type = "submit" class = "search-btn">Enter</button>
             </form>
+            
+            <!-- Earthquake Prediction Section -->
+            <div class="prediction-section">
+                <h2>🔮 Earthquake Predictions</h2>
+                <div class="prediction-controls">
+                    <label for="prediction-year">Predict for Year:</label>
+                    <input type="number" id="prediction-year" value="2025" min="2024" max="2030" class="year-input">
+                    <button id="predict-button" class="predict-btn">Predict</button>
+                </div>
+                <div id="prediction-results" class="prediction-results">
+                    <div id="prediction-output">Select a year to see earthquake predictions</div>
+                    <div id="model-info" class="model-info"></div>
+                </div>
+            </div>
             <h2>Marker Key</h2>
             <h3>
                 <ul>
@@ -58,6 +72,7 @@
         <div id="map" class="map"></div>
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="earthquake_model.js"></script>
     <script src="script.js"></script>
 </body>
 
