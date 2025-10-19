@@ -149,6 +149,299 @@ if (document.getElementById('toggle-heatwaves').checked) {
     getHeatWaveData(center.lat, center.lng);
 }
 
+// -------------------------
+// KMEANS CLUSTERING CLIENT
+// -------------------------
+
+// Small KMeans implementation (2D lat/lon) for client-side clustering
+function kmeans(points, k = 4, maxIter = 50, seed = 123456789) {
+  if (!points || points.length === 0) return null;
+  // Deterministic kmeans++ initialization using a seeded RNG (reproducible)
+  function mulberry32(a) {
+    return function() {
+      var t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+
+  const rng = mulberry32(Number.isFinite(seed) ? seed : 123456789);
+  const centroids = [];
+  const n = points.length;
+  const kActual = Math.min(k, n);
+
+  // Choose first centroid deterministically using RNG
+  let firstIdx = Math.floor(rng() * n);
+  centroids.push([...points[firstIdx]]);
+
+  // kmeans++: choose subsequent centroids with probability proportional to distance^2
+  while (centroids.length < kActual) {
+    // compute squared distances to nearest existing centroid
+    const d2 = new Array(n);
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      let minDist = Infinity;
+      for (let c = 0; c < centroids.length; c++) {
+        const dist = distanceSquared(points[i], centroids[c]);
+        if (dist < minDist) minDist = dist;
+      }
+      d2[i] = minDist;
+      total += minDist;
+    }
+
+    if (total === 0) {
+      // All points identical or centroids cover all variance; pick arbitrary remaining points
+      for (let i = 0; i < n && centroids.length < kActual; i++) {
+        const p = points[i];
+        // avoid adding duplicate centroid
+        if (!centroids.some(c => c[0] === p[0] && c[1] === p[1])) {
+          centroids.push([...p]);
+        }
+      }
+      break;
+    }
+
+    // select index by weighted sampling using seeded RNG
+    const threshold = rng() * total;
+    let cumsum = 0;
+    let chosen = -1;
+    for (let i = 0; i < n; i++) {
+      cumsum += d2[i];
+      if (cumsum >= threshold) { chosen = i; break; }
+    }
+    if (chosen === -1) chosen = n - 1;
+
+    const candidate = points[chosen];
+    if (!centroids.some(c => c[0] === candidate[0] && c[1] === candidate[1])) {
+      centroids.push([...candidate]);
+    } else {
+      // if duplicate, add next unused point deterministically
+      for (let i = 0; i < n && centroids.length < kActual; i++) {
+        const p = points[(chosen + i) % n];
+        if (!centroids.some(c => c[0] === p[0] && c[1] === p[1])) {
+          centroids.push([...p]); break;
+        }
+      }
+    }
+  }
+
+  let assignments = new Array(points.length).fill(-1);
+  for (let iter = 0; iter < maxIter; iter++) {
+    let moved = false;
+    // assignment step
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      let best = 0;
+      let bestDist = distanceSquared(p, centroids[0]);
+      for (let c = 1; c < centroids.length; c++) {
+        const d = distanceSquared(p, centroids[c]);
+        if (d < bestDist) { bestDist = d; best = c; }
+      }
+      if (assignments[i] !== best) {
+        assignments[i] = best; moved = true;
+      }
+    }
+
+    // update step
+    const sums = Array.from({length: centroids.length}, () => [0,0]);
+    const counts = new Array(centroids.length).fill(0);
+    for (let i = 0; i < points.length; i++) {
+      const a = assignments[i];
+      sums[a][0] += points[i][0];
+      sums[a][1] += points[i][1];
+      counts[a]++;
+    }
+    for (let c = 0; c < centroids.length; c++) {
+      if (counts[c] > 0) {
+        centroids[c][0] = sums[c][0] / counts[c];
+        centroids[c][1] = sums[c][1] / counts[c];
+      }
+    }
+
+    if (!moved) break;
+  }
+
+  return { centroids, assignments };
+}
+
+function distanceSquared(a, b) {
+  const dx = a[0] - b[0];
+  const dy = a[1] - b[1];
+  return dx*dx + dy*dy;
+}
+
+// Cluster visualization state
+let clusterLayers = [];
+let latestClusterResult = null; // store {centroids, assignments}
+let clusterPredictionLayers = []; // overlays for predicted counts
+
+// Create clusters from current earthquakeMarkers and draw them
+function createClusters(k = 4, seed = null) {
+  showSpinner('cluster-spinner');
+  // Clear existing cluster layers
+  clusterLayers.forEach(layer => map.removeLayer(layer));
+  clusterLayers = [];
+
+  // Gather points from earthquake markers
+  const points = earthquakeMarkers.map(m => {
+    const latlng = m.getLatLng();
+    return [latlng.lat, latlng.lng];
+  });
+  // Deterministic sort to remove dependence on feed ordering (sort by lat then lon)
+  points.sort((a, b) => {
+    if (a[0] === b[0]) return a[1] - b[1];
+    return a[0] - b[0];
+  });
+  if (points.length === 0) {
+    alert('No earthquake points available to cluster yet.');
+    return;
+  }
+
+  // If seed not provided, try to derive from prediction year for reproducibility
+  if (seed === null) {
+    const yearEl = document.getElementById('prediction-year');
+    const yearVal = yearEl ? parseInt(yearEl.value) : NaN;
+    seed = Number.isFinite(yearVal) ? yearVal : 123456789;
+  }
+  const result = kmeans(points, k, 80, seed);
+  if (!result) return;
+  latestClusterResult = result; // save for prediction mapping
+
+  const colors = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf'];
+
+  // draw centroids and convex hulls for each cluster
+  for (let c = 0; c < result.centroids.length; c++) {
+    const centroid = result.centroids[c];
+    const assignedPoints = points.filter((p, i) => result.assignments[i] === c);
+
+    // Draw small circle for centroid
+    const centroidMarker = L.circleMarker([centroid[0], centroid[1]], {
+      radius: 8,
+      color: '#000',
+      fillColor: colors[c % colors.length],
+      fillOpacity: 0.9,
+      weight: 1
+    }).addTo(map).bindPopup(`Cluster ${c}: ${assignedPoints.length} points`);
+    clusterLayers.push(centroidMarker);
+
+    // If there are enough points, draw polygon hull
+    if (assignedPoints.length >= 3) {
+      const hull = convexHull(assignedPoints.map(p => [p[0], p[1]]));
+      if (hull && hull.length >= 3) {
+        const poly = L.polygon(hull, {
+          color: colors[c % colors.length],
+          fillColor: colors[c % colors.length],
+          fillOpacity: 0.15,
+          weight: 1
+        }).addTo(map);
+        clusterLayers.push(poly);
+      }
+    } else if (assignedPoints.length > 0) {
+      // Draw circles for small clusters
+      assignedPoints.forEach(p => {
+        const circle = L.circle([p[0], p[1]], {radius: 8000, color: colors[c % colors.length], fillOpacity: 0.12}).addTo(map);
+        clusterLayers.push(circle);
+      });
+    }
+  }
+  // done
+  hideSpinner('cluster-spinner');
+}
+
+// Map a predicted total earthquake count to clusters and draw overlays
+function mapPredictionToClusters(totalPredicted) {
+  if (!latestClusterResult) {
+    alert('No cluster data available. Enable clustering first.');
+    return;
+  }
+
+  // Clear previous prediction overlays
+  clusterPredictionLayers.forEach(l => map.removeLayer(l));
+  clusterPredictionLayers = [];
+
+  // Count points per cluster
+  const counts = new Array(latestClusterResult.centroids.length).fill(0);
+  latestClusterResult.assignments.forEach(a => { counts[a]++; });
+  const totalPoints = counts.reduce((s,v) => s+v, 0) || 1;
+
+  // For each cluster, compute predicted allocation proportional to historical points
+  for (let c = 0; c < counts.length; c++) {
+    const centroid = latestClusterResult.centroids[c];
+    const proportion = counts[c] / totalPoints;
+    const predictedForCluster = Math.round(totalPredicted * proportion);
+
+    // Visualize as circle with radius proportional to predicted count
+    const radius = 5000 + Math.max(0, predictedForCluster) * 100; // base 5km + per-event scaling
+    const color = predictedForCluster > 0 ? '#ff0000' : '#999999';
+    const circle = L.circle([centroid[0], centroid[1]], {
+      radius: radius,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.25,
+      weight: 1
+    }).addTo(map).bindPopup(`<strong>Predicted for cluster ${c}:</strong><br>${predictedForCluster.toLocaleString()} earthquakes (${(proportion*100).toFixed(1)}% of total)`);
+
+    clusterPredictionLayers.push(circle);
+  }
+
+  console.log('Mapped prediction to clusters:', counts, 'total predicted', totalPredicted);
+}
+
+// Spinner helpers
+function showSpinner(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('hidden');
+}
+function hideSpinner(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+}
+
+// Simple convex hull (Monotone chain) for lat/lon points
+function convexHull(points) {
+  if (!points || points.length < 3) return null;
+  const pts = points.map(p => [p[1], p[0]]); // swap to [x, y] = [lon, lat]
+  pts.sort((a,b) => a[0] === b[0] ? a[1]-b[1] : a[0]-b[0]);
+
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length-1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  upper.pop(); lower.pop();
+  const hull = lower.concat(upper).map(p => [p[1], p[0]]); // map back to [lat, lon]
+  return hull;
+}
+
+function cross(o, a, b) {
+  return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+}
+
+// Setup cluster UI controls
+function setupClusterControls() {
+  const clusterToggle = document.getElementById('toggle-clusters');
+  const clusterK = document.getElementById('cluster-k');
+  if (!clusterToggle || !clusterK) return;
+  clusterToggle.addEventListener('change', () => {
+    if (clusterToggle.checked) {
+      createClusters(parseInt(clusterK.value) || 4);
+    } else {
+      clusterLayers.forEach(l => map.removeLayer(l)); clusterLayers = [];
+    }
+  });
+  clusterK.addEventListener('change', () => {
+    if (clusterToggle.checked) createClusters(parseInt(clusterK.value) || 4);
+  });
+}
+
+
 // Step 1: Handle search form submission
 document.getElementById('search-form').addEventListener('submit', function (e) { //this finds the HTML element with the id 'search-form'; and it sets up a listener that waits for the form submission event (submit); and runs when submitted
     e.preventDefault(); // Prevent form from reloading the page
@@ -699,7 +992,6 @@ function initialize() {
     initializePredictionModel();
     setupPredictionControls();
   setupClusterControls();
-  setupSidebarToggle();
     
     // Make initial prediction for current year
     setTimeout(() => {

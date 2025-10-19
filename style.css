@@ -69,33 +69,6 @@ html, body {
   padding: 20px;
 }
 
-/* Collapsible sidebar states */
-#sidebar {
-  transition: transform 260ms ease, opacity 260ms ease;
-}
-.sidebar.collapsed {
-  transform: translateX(-320px);
-  opacity: 0.02;
-  pointer-events: none;
-}
-
-.sidebar-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.sidebar-toggle{ background:transparent; border:1px solid rgba(0,0,0,0.06); padding:6px 8px; border-radius:8px; cursor:pointer; font-size:16px; }
-.sidebar-toggle:focus{ outline:3px solid rgba(79,70,229,0.18); }
-
-.sidebar-panel{ display:flex; flex-direction:column; gap:12px; }
-
-/* Skip link for keyboard users */
-
-
-.visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
-
-/* Keyboard focus styles for interactive elements */
-button:focus, input:focus, select:focus {
-  outline: 3px solid rgba(79,70,229,0.18);
-  outline-offset: 2px;
-}
-
 
 
 .sidebar::-webkit-scrollbar {
