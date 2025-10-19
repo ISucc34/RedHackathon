@@ -43,21 +43,6 @@
                 <input type="search" id="gsearch" name="gsearch">
                 <button type = "submit" class = "search-btn">Enter</button>
             </form>
-            
-            <!-- Earthquake Prediction Section -->
-            <div class="prediction-section">
-                <h2>🔮 Earthquake Predictions</h2>
-                <div class="prediction-controls">
-                    <label for="prediction-year">Predict for Year:</label>
-                    <input type="number" id="prediction-year" value="2025" min="2024" max="2030" class="year-input">
-                    <button id="predict-button" class="predict-btn">Predict</button>
-                    <button id="map-predict-button" class="predict-btn" style="margin-left:8px;">Map Prediction to Clusters</button>
-                </div>
-                <div id="prediction-results" class="prediction-results">
-                    <div id="prediction-output">Select a year to see earthquake predictions</div>
-                    <div id="model-info" class="model-info"></div>
-                </div>
-            </div>
             <h2>Marker Key</h2>
             <h3>
                 <ul>
@@ -93,6 +78,21 @@
                     <label for="cluster-k">Clusters (k):</label>
                     <input id="cluster-k" type="number" value="4" min="2" max="12" style="width:60px; margin-left:8px;" />
                 </div>
+
+                            <!-- Earthquake Prediction Section -->
+            <div class="prediction-section">
+                <h2>🔮 Earthquake Predictions</h2>
+                <div class="prediction-controls">
+                    <label for="prediction-year">Predict for Year:</label>
+                    <input type="number" id="prediction-year" value="2025" min="2024" max="2030" class="year-input">
+                    <button id="predict-button" class="predict-btn">Predict</button>
+                    <button id="map-predict-button" class="predict-btn" style="margin-left:8px;">Map Prediction to Clusters</button>
+                </div>
+                <div id="prediction-results" class="prediction-results">
+                    <div id="prediction-output">Select a year to see earthquake predictions</div>
+                    <div id="model-info" class="model-info"></div>
+                </div>
+            </div>
         </div>
         
         <div id="map" class="map"></div>
