@@ -101,7 +101,7 @@ if (document.getElementById('toggle-heatwaves').checked) {
 // -------------------------
 
 // Small KMeans implementation (2D lat/lon) for client-side clustering
-function kmeans(points, k = 4, maxIter = 50) {
+function kmeans(points, k = 4, maxIter = 50, seed = 123456789) {
   if (!points || points.length === 0) return null;
   // Deterministic kmeans++ initialization using a seeded RNG (reproducible)
   function mulberry32(a) {
@@ -113,7 +113,7 @@ function kmeans(points, k = 4, maxIter = 50) {
     }
   }
 
-  const rng = mulberry32(123456789); // fixed seed for determinism
+  const rng = mulberry32(Number.isFinite(seed) ? seed : 123456789);
   const centroids = [];
   const n = points.length;
   const kActual = Math.min(k, n);
@@ -224,7 +224,7 @@ let latestClusterResult = null; // store {centroids, assignments}
 let clusterPredictionLayers = []; // overlays for predicted counts
 
 // Create clusters from current earthquakeMarkers and draw them
-function createClusters(k = 4) {
+function createClusters(k = 4, seed = null) {
   // Clear existing cluster layers
   clusterLayers.forEach(layer => map.removeLayer(layer));
   clusterLayers = [];
@@ -234,12 +234,23 @@ function createClusters(k = 4) {
     const latlng = m.getLatLng();
     return [latlng.lat, latlng.lng];
   });
+  // Deterministic sort to remove dependence on feed ordering (sort by lat then lon)
+  points.sort((a, b) => {
+    if (a[0] === b[0]) return a[1] - b[1];
+    return a[0] - b[0];
+  });
   if (points.length === 0) {
     alert('No earthquake points available to cluster yet.');
     return;
   }
 
-  const result = kmeans(points, k, 80);
+  // If seed not provided, try to derive from prediction year for reproducibility
+  if (seed === null) {
+    const yearEl = document.getElementById('prediction-year');
+    const yearVal = yearEl ? parseInt(yearEl.value) : NaN;
+    seed = Number.isFinite(yearVal) ? yearVal : 123456789;
+  }
+  const result = kmeans(points, k, 80, seed);
   if (!result) return;
   latestClusterResult = result; // save for prediction mapping
 
