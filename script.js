@@ -107,9 +107,24 @@ if (document.getElementById('toggle-heatwaves').checked) {
 // -------------------------
 
 // Small KMeans implementation (2D lat/lon) for client-side clustering
-function kmeans(points, k = 4, maxIter = 50, seed = 123456789) {
+function kmeans(points, k = 4, maxIter = 50, seed = 123456789, tolMeters = 1.0) {
   if (!points || points.length === 0) return null;
-  // Deterministic kmeans++ initialization using a seeded RNG (reproducible)
+
+  // Helper: Web Mercator projection (meters)
+  function latLonToMeters(lat, lon) {
+    const R = 6378137; // radius
+    const x = R * lon * Math.PI / 180.0;
+    const y = R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 360)));
+    return [x, y];
+  }
+  function metersToLatLon(x, y) {
+    const R = 6378137;
+    const lon = (x / R) * 180.0 / Math.PI;
+    const lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI/2) * 180.0 / Math.PI;
+    return [lat, lon];
+  }
+
+  // Deterministic RNG
   function mulberry32(a) {
     return function() {
       var t = a += 0x6D2B79F5;
@@ -120,23 +135,26 @@ function kmeans(points, k = 4, maxIter = 50, seed = 123456789) {
   }
 
   const rng = mulberry32(Number.isFinite(seed) ? seed : 123456789);
-  const centroids = [];
-  const n = points.length;
+
+  // Project points to meters for Euclidean KMeans
+  const proj = points.map(p => latLonToMeters(p[0], p[1]));
+  const n = proj.length;
   const kActual = Math.min(k, n);
 
-  // Choose first centroid deterministically using RNG
-  let firstIdx = Math.floor(rng() * n);
-  centroids.push([...points[firstIdx]]);
+  // kmeans++ initialization on projected coords
+  const centroidsProj = [];
+  // first centroid: random deterministic
+  centroidsProj.push([...proj[Math.floor(rng() * n)]]);
 
-  // kmeans++: choose subsequent centroids with probability proportional to distance^2
-  while (centroids.length < kActual) {
-    // compute squared distances to nearest existing centroid
+  while (centroidsProj.length < kActual) {
     const d2 = new Array(n);
     let total = 0;
     for (let i = 0; i < n; i++) {
       let minDist = Infinity;
-      for (let c = 0; c < centroids.length; c++) {
-        const dist = distanceSquared(points[i], centroids[c]);
+      for (let c = 0; c < centroidsProj.length; c++) {
+        const dx = proj[i][0] - centroidsProj[c][0];
+        const dy = proj[i][1] - centroidsProj[c][1];
+        const dist = dx*dx + dy*dy;
         if (dist < minDist) minDist = dist;
       }
       d2[i] = minDist;
@@ -144,18 +162,14 @@ function kmeans(points, k = 4, maxIter = 50, seed = 123456789) {
     }
 
     if (total === 0) {
-      // All points identical or centroids cover all variance; pick arbitrary remaining points
-      for (let i = 0; i < n && centroids.length < kActual; i++) {
-        const p = points[i];
-        // avoid adding duplicate centroid
-        if (!centroids.some(c => c[0] === p[0] && c[1] === p[1])) {
-          centroids.push([...p]);
-        }
+      // all identical; fill remaining with unused points
+      for (let i = 0; i < n && centroidsProj.length < kActual; i++) {
+        const p = proj[i];
+        if (!centroidsProj.some(c => c[0] === p[0] && c[1] === p[1])) centroidsProj.push([...p]);
       }
       break;
     }
 
-    // select index by weighted sampling using seeded RNG
     const threshold = rng() * total;
     let cumsum = 0;
     let chosen = -1;
@@ -164,60 +178,86 @@ function kmeans(points, k = 4, maxIter = 50, seed = 123456789) {
       if (cumsum >= threshold) { chosen = i; break; }
     }
     if (chosen === -1) chosen = n - 1;
-
-    const candidate = points[chosen];
-    if (!centroids.some(c => c[0] === candidate[0] && c[1] === candidate[1])) {
-      centroids.push([...candidate]);
+    const candidate = proj[chosen];
+    if (!centroidsProj.some(c => c[0] === candidate[0] && c[1] === candidate[1])) {
+      centroidsProj.push([...candidate]);
     } else {
-      // if duplicate, add next unused point deterministically
-      for (let i = 0; i < n && centroids.length < kActual; i++) {
-        const p = points[(chosen + i) % n];
-        if (!centroids.some(c => c[0] === p[0] && c[1] === p[1])) {
-          centroids.push([...p]); break;
+      for (let i = 0; i < n && centroidsProj.length < kActual; i++) {
+        const p = proj[(chosen + i) % n];
+        if (!centroidsProj.some(c => c[0] === p[0] && c[1] === p[1])) { centroidsProj.push([...p]); break; }
+      }
+    }
+  }
+
+  let assignments = new Array(n).fill(-1);
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    let moved = false;
+
+    // assignment step
+    for (let i = 0; i < n; i++) {
+      const p = proj[i];
+      let best = 0;
+      let bestDist = (p[0]-centroidsProj[0][0])**2 + (p[1]-centroidsProj[0][1])**2;
+      for (let c = 1; c < centroidsProj.length; c++) {
+        const d = (p[0]-centroidsProj[c][0])**2 + (p[1]-centroidsProj[c][1])**2;
+        if (d < bestDist) { bestDist = d; best = c; }
+      }
+      if (assignments[i] !== best) { assignments[i] = best; moved = true; }
+    }
+
+    // update step with movement tracking
+    const sums = Array.from({length: centroidsProj.length}, () => [0,0]);
+    const counts = new Array(centroidsProj.length).fill(0);
+    for (let i = 0; i < n; i++) {
+      const a = assignments[i];
+      sums[a][0] += proj[i][0];
+      sums[a][1] += proj[i][1];
+      counts[a]++;
+    }
+
+    let totalMove2 = 0;
+    for (let c = 0; c < centroidsProj.length; c++) {
+      if (counts[c] > 0) {
+        const newX = sums[c][0] / counts[c];
+        const newY = sums[c][1] / counts[c];
+        const dx = newX - centroidsProj[c][0];
+        const dy = newY - centroidsProj[c][1];
+        totalMove2 += dx*dx + dy*dy;
+        centroidsProj[c][0] = newX;
+        centroidsProj[c][1] = newY;
+      } else {
+        // Empty cluster: reinitialize to the farthest point from existing centroids
+        let farIdx = -1; let farDist = -1;
+        for (let i = 0; i < n; i++) {
+          // distance to nearest centroid
+          let minD = Infinity;
+          for (let cc = 0; cc < centroidsProj.length; cc++) {
+            const dx = proj[i][0]-centroidsProj[cc][0];
+            const dy = proj[i][1]-centroidsProj[cc][1];
+            const d = dx*dx + dy*dy;
+            if (d < minD) minD = d;
+          }
+          if (minD > farDist) { farDist = minD; farIdx = i; }
+        }
+        if (farIdx >= 0) {
+          centroidsProj[c] = [...proj[farIdx]];
         }
       }
     }
-  }
 
-  let assignments = new Array(points.length).fill(-1);
-  for (let iter = 0; iter < maxIter; iter++) {
-    let moved = false;
-    // assignment step
-    for (let i = 0; i < points.length; i++) {
-      const p = points[i];
-      let best = 0;
-      let bestDist = distanceSquared(p, centroids[0]);
-      for (let c = 1; c < centroids.length; c++) {
-        const d = distanceSquared(p, centroids[c]);
-        if (d < bestDist) { bestDist = d; best = c; }
-      }
-      if (assignments[i] !== best) {
-        assignments[i] = best; moved = true;
-      }
-    }
-
-    // update step
-    const sums = Array.from({length: centroids.length}, () => [0,0]);
-    const counts = new Array(centroids.length).fill(0);
-    for (let i = 0; i < points.length; i++) {
-      const a = assignments[i];
-      sums[a][0] += points[i][0];
-      sums[a][1] += points[i][1];
-      counts[a]++;
-    }
-    for (let c = 0; c < centroids.length; c++) {
-      if (counts[c] > 0) {
-        centroids[c][0] = sums[c][0] / counts[c];
-        centroids[c][1] = sums[c][1] / counts[c];
-      }
-    }
-
+    // early exit if centroids moved less than tolerance (in meters)
+    if (Math.sqrt(totalMove2) <= tolMeters) break;
     if (!moved) break;
   }
 
+  // convert centroids back to lat/lon for output
+  const centroids = centroidsProj.map(c => metersToLatLon(c[0], c[1]));
+  // centroids are returned as [lat, lon]
   return { centroids, assignments };
 }
 
+// distanceSquared kept for other uses — expects [x,y] in projected meters or plain x/y
 function distanceSquared(a, b) {
   const dx = a[0] - b[0];
   const dy = a[1] - b[1];
@@ -391,6 +431,65 @@ function setupClusterControls() {
   });
   clusterK.addEventListener('change', () => {
     if (clusterToggle.checked) createClusters(parseInt(clusterK.value) || 4);
+  });
+}
+
+// -----------------------------
+// Sidebar accessibility toggle
+// -----------------------------
+function toggleSidebar(collapsed) {
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebar-toggle');
+  const panel = document.getElementById('sidebar-panel');
+  if (!sidebar || !btn || !panel) return;
+
+  if (typeof collapsed === 'boolean') {
+    if (collapsed) sidebar.classList.add('collapsed'); else sidebar.classList.remove('collapsed');
+  } else {
+    sidebar.classList.toggle('collapsed');
+  }
+
+  const isCollapsed = sidebar.classList.contains('collapsed');
+  btn.setAttribute('aria-expanded', String(!isCollapsed));
+  btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+  sidebar.setAttribute('aria-hidden', isCollapsed ? 'true' : 'false');
+  // persist
+  try { localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0'); } catch (e) {}
+}
+
+function setupSidebarToggle() {
+  const btn = document.getElementById('sidebar-toggle');
+  const sidebar = document.getElementById('sidebar');
+  if (!btn || !sidebar) return;
+
+  // Restore persisted state
+  try {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved === '1') toggleSidebar(true);
+  } catch (e) {}
+
+  btn.addEventListener('click', () => toggleSidebar());
+
+  // Close sidebar with Escape when focused inside
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!sidebar.classList.contains('collapsed')) {
+        toggleSidebar(true);
+        // return focus to toggle button
+        btn.focus();
+      }
+    }
+  });
+
+  // Skip-to-map link improvements
+  const skip = document.getElementById('skip-to-map');
+  if (skip) skip.addEventListener('click', (e) => {
+    // allow default jump; then focus map container for keyboard users
+    setTimeout(() => {
+      const mapEl = document.getElementById('map');
+      if (mapEl) mapEl.setAttribute('tabindex', '-1');
+      if (mapEl) mapEl.focus();
+    }, 50);
   });
 }
 
@@ -732,6 +831,7 @@ function initialize() {
     initializePredictionModel();
     setupPredictionControls();
   setupClusterControls();
+  setupSidebarToggle();
     
     // Make initial prediction for current year
     setTimeout(() => {
