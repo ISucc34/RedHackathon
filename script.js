@@ -1,4 +1,4 @@
-// Initialize map
+// Initialize map old
 let map = L.map('map').setView([31.0, -100.0], 6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
@@ -13,7 +13,7 @@ let floodMarkers = [];
 
 // Custom icons
 const greenIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-green.png',
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -21,7 +21,7 @@ const greenIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 const redIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-red.png',
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -29,7 +29,7 @@ const redIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 const purpleIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-violet.png',
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -37,13 +37,14 @@ const purpleIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 const blueIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet-color-markers@1.1.1/dist/img/marker-icon-blue.png',
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
+
 
 // Earthquake logic
 function getEarthquakes() {
@@ -81,6 +82,7 @@ function displayEarthquakes(data) {
 
 // Load earthquakes when page loads
 getEarthquakes();
+// Add a manual test blue marker to confirm icon works
 if (document.getElementById('toggle-heatwaves').checked) {
     const center = map.getCenter();
     getHeatWaveData(center.lat, center.lng);
@@ -228,34 +230,51 @@ function getWildfiresForTexas() {
   .catch(err => console.error('Error fetching wildfires:', err));
 }
 
-document.getElementById('toggle-floods').addEventListener('change', function() {
+function getFloods() {
+    clearMarkers(floodMarkers);
+    // Use NASA EONET API for global flood events
+    fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=floods')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Flood data from EONET:', data);
+        if (!data.events || data.events.length === 0) {
+          alert('No active flood events found worldwide at this time.');
+          return;
+        }
+        let markerCount = 0;
+        data.events.forEach(event => {
+          // Use the first geometry with coordinates (usually a point or polygon)
+          const geometry = event.geometry?.find(g => g.coordinates && g.type === 'Point') || event.geometry?.[0];
+          if (!geometry || !geometry.coordinates) {
+            console.log('No valid geometry for event:', event);
+            return;
+          }
+          const lon = geometry.coordinates[0];
+          const lat = geometry.coordinates[1];
+          const title = event.title || 'Flood Event';
+          const date = geometry.date || '';
+          const desc = event.description || '';
+          const marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
+            .bindPopup(`
+              <b>${title}</b><br>
+              <b>Date:</b> ${date ? new Date(date).toLocaleDateString() : 'N/A'}<br>
+              ${desc}
+            `);
+          floodMarkers.push(marker);
+          markerCount++;
+        });
+        if (markerCount === 0) {
+          alert('No valid flood markers found in EONET data.');
+        }
+      })
+      .catch(err => console.error('Error fetching EONET floods:', err));
+}
+
+document.getElementById('toggle-floods').addEventListener('change', function () {
   if (this.checked) {
-    getFloodsForTexas();
+    getFloods();
   } else {
     clearMarkers(floodMarkers);
   }
 });
 
-function getFloodsForTexas() {
-  clearMarkers(floodMarkers);
-  // Use USGS water data for Texas bounding box
-  const bbox = '-106.645646,25.837377,-93.508039,36.500704';
-  fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${bbox}&parameterCd=00065,00060&siteStatus=active`)
-    .then(res => res.json())
-    .then(data => {
-      if (!data.value || !data.value.timeSeries) return;
-      data.value.timeSeries.forEach(site => {
-        const siteInfo = site.sourceInfo;
-        const values = site.values[0]?.value;
-        const latestValue = values ? values[values.length - 1] : null;
-        if (!siteInfo || !siteInfo.geoLocation || !siteInfo.geoLocation.geogLocation || !latestValue) return;
-        const lat = siteInfo.geoLocation.geogLocation.latitude;
-        const lon = siteInfo.geoLocation.geogLocation.longitude;
-        const marker = L.marker([lat, lon], { icon: blueIcon }).addTo(map)
-          .bindPopup(`<b>Flood Site:</b> ${siteInfo.siteName}<br><b>Value:</b> ${latestValue.value} ${site.variable.unit.unitCode}`);
-        floodMarkers.push(marker);
-      });
-    })
-    .catch(err => console.error('Error fetching floods:', err));
-}
-}
