@@ -1,0 +1,4 @@
+This folder contains how the model was trained
+
+The models used were trained on an earthquake dataset from 1993-2025. One model was trained using linear regression to predict future earthquake amaounts.
+Another model was trained using K-means clustering to cluster data gathered, and create clusters predicted earthquakes.
