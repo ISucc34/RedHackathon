@@ -1,5 +1,5 @@
 # CodeRedHackathon2025
-This is the project we created for the CodeRed Astra Hackathon in 2025 called Nature Calls
+This is the project we created for the CodeRed Astra Hackathon in 2025 called Nature Calls.
 Open at https://daferna3.github.io/naturecalls-redhackathon/
 
 # Nature Calls
